@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
+import useSWR from "swr";
+import { api } from "@/lib/api";
 
 type KeyHandler = (e: KeyboardEvent) => void;
 
@@ -22,4 +24,11 @@ export function useKeyboardShortcuts(handlers: Record<string, KeyHandler>) {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [handlers]);
+}
+
+export function useConnectionStatus(): { isConnected: boolean } {
+  const { data, error } = useSWR("/health", api.fetchHealth, {
+    refreshInterval: 5000,
+  });
+  return { isConnected: !error && data !== undefined };
 }

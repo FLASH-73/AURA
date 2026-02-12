@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { useAssembly } from "@/context/AssemblyContext";
 import { useExecution } from "@/context/ExecutionContext";
 import { MOCK_STEP_METRICS } from "@/lib/mock-data";
+import { api } from "@/lib/api";
 import { ActionButton } from "./ActionButton";
 import { StatusBadge } from "./StatusBadge";
 import { MiniChart } from "./MiniChart";
@@ -15,6 +17,8 @@ function formatMs(ms: number): string {
 export function StepDetail() {
   const { assembly, selectedStepId } = useAssembly();
   const { executionState } = useExecution();
+  const [recordingLoading, setRecordingLoading] = useState(false);
+  const [trainingLoading, setTrainingLoading] = useState(false);
 
   if (!assembly || !selectedStepId) {
     return (
@@ -105,11 +109,40 @@ export function StepDetail() {
 
       {/* Actions */}
       <div className="flex gap-2 pt-1">
-        <ActionButton variant="secondary">Record Demos</ActionButton>
+        <ActionButton
+          variant="secondary"
+          disabled={recordingLoading}
+          onClick={() => {
+            setRecordingLoading(true);
+            api
+              .startRecording(selectedStepId)
+              .catch(console.warn)
+              .finally(() => setRecordingLoading(false));
+          }}
+        >
+          {recordingLoading ? "Recording..." : "Record Demos"}
+        </ActionButton>
         {step.handler === "policy" && (
-          <ActionButton variant="primary">Train</ActionButton>
+          <ActionButton
+            variant="primary"
+            disabled={trainingLoading}
+            onClick={() => {
+              setTrainingLoading(true);
+              api
+                .trainStep(selectedStepId, { architecture: "act", numSteps: 10_000 })
+                .catch(console.warn)
+                .finally(() => setTrainingLoading(false));
+            }}
+          >
+            {trainingLoading ? "Training..." : "Train"}
+          </ActionButton>
         )}
-        <ActionButton variant="secondary">Test Step</ActionButton>
+        <ActionButton
+          variant="secondary"
+          onClick={() => console.log("Test step:", selectedStepId)}
+        >
+          Test Step
+        </ActionButton>
       </div>
     </div>
   );

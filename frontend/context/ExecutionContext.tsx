@@ -12,6 +12,7 @@ import {
 } from "react";
 import type { ExecutionState, StepRuntimeState } from "@/lib/types";
 import { MOCK_EXECUTION_STATE } from "@/lib/mock-data";
+import { api } from "@/lib/api";
 import { useAssembly } from "./AssemblyContext";
 
 interface ExecutionContextValue {
@@ -119,6 +120,8 @@ export function ExecutionProvider({ children }: { children: ReactNode }) {
     clearTimer();
     stepIndexRef.current = 0;
 
+    api.startAssembly(assembly.id).catch(console.warn);
+
     const firstStepId = assembly.stepOrder[0];
     if (!firstStepId) return;
     const idleStates = makeIdleStepStates(assembly.stepOrder);
@@ -146,6 +149,7 @@ export function ExecutionProvider({ children }: { children: ReactNode }) {
   }, [assembly, clearTimer, advanceStep, state.runNumber, state.overallSuccessRate]);
 
   const pauseExecution = useCallback(() => {
+    api.pauseExecution().catch(console.warn);
     clearTimer();
     setState((prev) => ({ ...prev, phase: "paused" }));
   }, [clearTimer]);
@@ -156,6 +160,7 @@ export function ExecutionProvider({ children }: { children: ReactNode }) {
   }, [advanceStep]);
 
   const stopExecution = useCallback(() => {
+    api.stopExecution().catch(console.warn);
     clearTimer();
     stepIndexRef.current = 0;
     setState((prev) => ({
@@ -169,6 +174,7 @@ export function ExecutionProvider({ children }: { children: ReactNode }) {
   }, [clearTimer, assembly]);
 
   const intervene = useCallback(() => {
+    api.intervene().catch(console.warn);
     clearTimer();
     setState((prev) => ({ ...prev, phase: "teaching" }));
   }, [clearTimer]);

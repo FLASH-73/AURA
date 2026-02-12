@@ -2,6 +2,7 @@
 
 import { useAssembly } from "@/context/AssemblyContext";
 import { useExecution } from "@/context/ExecutionContext";
+import { useConnectionStatus } from "@/lib/hooks";
 import { RunControls } from "./RunControls";
 
 function formatTime(ms: number): string {
@@ -9,6 +10,20 @@ function formatTime(ms: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function ConnectionIndicator() {
+  const { isConnected } = useConnectionStatus();
+  return (
+    <div className="flex items-center gap-1.5">
+      <div
+        className={`h-2 w-2 rounded-full ${isConnected ? "bg-status-success" : "bg-status-error"}`}
+      />
+      <span className="text-[11px] text-text-tertiary">
+        {isConnected ? "Connected" : "Offline"}
+      </span>
+    </div>
+  );
 }
 
 export function TopBar() {
@@ -20,7 +35,7 @@ export function TopBar() {
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-bg-tertiary px-6">
-      {/* Left: wordmark + assembly selector */}
+      {/* Left: wordmark + assembly selector + connection status */}
       <div className="flex items-center gap-4">
         <span className="text-[18px] font-semibold tracking-[0.05em] text-accent">
           MANUS
@@ -36,6 +51,7 @@ export function TopBar() {
             </option>
           ))}
         </select>
+        <ConnectionIndicator />
       </div>
 
       {/* Center: cycle time */}

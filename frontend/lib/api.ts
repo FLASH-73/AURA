@@ -1,5 +1,6 @@
 import type {
   Assembly,
+  AssemblySummary,
   ExecutionState,
   StepMetrics,
   TrainConfig,
@@ -41,55 +42,62 @@ async function patch<T = void>(path: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-// Fetcher with mock fallback — used by SWR
+// Mock fallback — only catches network errors (TypeError from fetch when
+// server is unreachable). HTTP errors (4xx/5xx) propagate normally.
 async function withMockFallback<T>(fetcher: () => Promise<T>, fallback: T): Promise<T> {
   try {
     return await fetcher();
-  } catch {
-    return fallback;
+  } catch (error) {
+    if (error instanceof TypeError) {
+      return fallback;
+    }
+    throw error;
   }
 }
 
 export const api = {
-  // Assembly
+  // --- Raw fetchers for SWR (errors propagate to SWR) ---
+  fetchAssemblySummaries: () => get<AssemblySummary[]>("/assemblies"),
+  fetchAssembly: (id: string) => get<Assembly>(`/assemblies/${id}`),
+  fetchHealth: () => get<{ status: string }>("/health"),
+
+  // --- Fallback-wrapped fetchers for imperative calls ---
   getAssemblies: () =>
     withMockFallback(() => get<Assembly[]>("/assemblies"), MOCK_ASSEMBLIES),
   getAssembly: (id: string) =>
     withMockFallback(() => get<Assembly>(`/assemblies/${id}`), MOCK_ASSEMBLY),
-
-  // Execution
-  startAssembly: (id: string) => post("/execution/start", { assembly_id: id }),
-  pauseExecution: () => post("/execution/pause"),
-  stopExecution: () => post("/execution/stop"),
-  intervene: () => post("/execution/intervene"),
   getExecutionState: () =>
     withMockFallback(
       () => get<ExecutionState>("/execution/state"),
       MOCK_EXECUTION_STATE,
     ),
-
-  // Step updates
-  updateStep: (assemblyId: string, stepId: string, data: Partial<AssemblyStep>) =>
-    patch(`/assemblies/${assemblyId}/steps/${stepId}`, data),
-
-  // Teleop
-  startTeleop: (arms: string[]) => post("/teleop/start", { arms }),
-  stopTeleop: () => post("/teleop/stop"),
-
-  // Recording
-  startRecording: (stepId: string) => post(`/recording/step/${stepId}/start`),
-  stopRecording: () => post("/recording/stop"),
-
-  // Training
-  trainStep: (stepId: string, config: TrainConfig) =>
-    post<TrainStatus>(`/training/step/${stepId}/train`, config),
-  getTrainingStatus: (jobId: string) =>
-    get<TrainStatus>(`/training/jobs/${jobId}`),
-
-  // Analytics
   getStepMetrics: (assemblyId: string) =>
     withMockFallback(
       () => get<StepMetrics[]>(`/analytics/${assemblyId}/steps`),
       Object.values(MOCK_STEP_METRICS),
     ),
+
+  // --- Execution ---
+  startAssembly: (id: string) => post("/execution/start", { assembly_id: id }),
+  pauseExecution: () => post("/execution/pause"),
+  stopExecution: () => post("/execution/stop"),
+  intervene: () => post("/execution/intervene"),
+
+  // --- Step updates ---
+  updateStep: (assemblyId: string, stepId: string, data: Partial<AssemblyStep>) =>
+    patch(`/assemblies/${assemblyId}/steps/${stepId}`, data),
+
+  // --- Teleop ---
+  startTeleop: (arms: string[]) => post("/teleop/start", { arms }),
+  stopTeleop: () => post("/teleop/stop"),
+
+  // --- Recording ---
+  startRecording: (stepId: string) => post(`/recording/step/${stepId}/start`),
+  stopRecording: () => post("/recording/stop"),
+
+  // --- Training ---
+  trainStep: (stepId: string, config: TrainConfig) =>
+    post<TrainStatus>(`/training/step/${stepId}/train`, config),
+  getTrainingStatus: (jobId: string) =>
+    get<TrainStatus>(`/training/jobs/${jobId}`),
 };

@@ -17,6 +17,7 @@ dependencies = [
     "numpy",
     "torch",
     "fastapi",
+    "pydantic>=2.0",
     "uvicorn[standard]",
     "pyyaml",
     "trimesh",

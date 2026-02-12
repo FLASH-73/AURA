@@ -54,6 +54,11 @@ export interface AssemblyStep {
   maxRetries: number;
 }
 
+export interface AssemblySummary {
+  id: string;
+  name: string;
+}
+
 export interface Assembly {
   id: string;
   name: string;

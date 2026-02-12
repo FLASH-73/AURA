@@ -1,5 +1,6 @@
 import type {
   Assembly,
+  AssemblySummary,
   ExecutionState,
   StepMetrics,
   StepRuntimeState,
@@ -151,6 +152,11 @@ export const MOCK_ASSEMBLIES: Assembly[] = [
     stepOrder: [],
   },
 ];
+
+export const MOCK_SUMMARIES: AssemblySummary[] = MOCK_ASSEMBLIES.map((a) => ({
+  id: a.id,
+  name: a.name,
+}));
 
 // ---------------------------------------------------------------------------
 // Mock execution state — step 3 active, steps 1-2 complete

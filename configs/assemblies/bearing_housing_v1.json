@@ -1,0 +1,107 @@
+{
+  "id": "bearing_housing_v1",
+  "name": "Bearing Housing v1",
+  "parts": {
+    "housing": {
+      "id": "housing",
+      "cadFile": null,
+      "meshFile": null,
+      "graspPoints": [
+        {"pose": [0, 0.04, 0, 0, 0, 0], "approach": [0, -1, 0]}
+      ]
+    },
+    "bearing": {
+      "id": "bearing",
+      "cadFile": null,
+      "meshFile": null,
+      "graspPoints": [
+        {"pose": [0, 0.05, 0, 0, 0, 0], "approach": [0, -1, 0]}
+      ]
+    },
+    "fixture": {
+      "id": "fixture",
+      "cadFile": null,
+      "meshFile": null,
+      "graspPoints": []
+    },
+    "pin_1": {
+      "id": "pin_1",
+      "cadFile": null,
+      "meshFile": null,
+      "graspPoints": [
+        {"pose": [-0.025, 0.04, 0, 0, 0, 0], "approach": [0, -1, 0]}
+      ]
+    },
+    "pin_2": {
+      "id": "pin_2",
+      "cadFile": null,
+      "meshFile": null,
+      "graspPoints": [
+        {"pose": [0.025, 0.04, 0, 0, 0, 0], "approach": [0, -1, 0]}
+      ]
+    }
+  },
+  "steps": {
+    "step_001": {
+      "id": "step_001",
+      "name": "Pick housing",
+      "partIds": ["housing"],
+      "dependencies": [],
+      "handler": "primitive",
+      "primitiveType": "pick",
+      "primitiveParams": {"part_id": "housing", "grasp_index": 0},
+      "policyId": null,
+      "successCriteria": {"type": "force_threshold", "threshold": 0.5},
+      "maxRetries": 3
+    },
+    "step_002": {
+      "id": "step_002",
+      "name": "Place housing in fixture",
+      "partIds": ["housing"],
+      "dependencies": ["step_001"],
+      "handler": "primitive",
+      "primitiveType": "place",
+      "primitiveParams": {"target_pose": [0, 0.02, 0], "approach_height": 0.05},
+      "policyId": null,
+      "successCriteria": {"type": "classifier", "model": "step_002_classifier"},
+      "maxRetries": 3
+    },
+    "step_003": {
+      "id": "step_003",
+      "name": "Pick bearing",
+      "partIds": ["bearing"],
+      "dependencies": ["step_002"],
+      "handler": "primitive",
+      "primitiveType": "pick",
+      "primitiveParams": {"part_id": "bearing", "grasp_index": 0},
+      "policyId": null,
+      "successCriteria": {"type": "force_threshold", "threshold": 0.3},
+      "maxRetries": 3
+    },
+    "step_004": {
+      "id": "step_004",
+      "name": "Insert bearing",
+      "partIds": ["bearing", "housing"],
+      "dependencies": ["step_003"],
+      "handler": "policy",
+      "primitiveType": null,
+      "primitiveParams": null,
+      "policyId": null,
+      "successCriteria": {"type": "force_signature", "pattern": "snap_fit"},
+      "maxRetries": 3
+    },
+    "step_005": {
+      "id": "step_005",
+      "name": "Press fit pins",
+      "partIds": ["pin_1", "pin_2"],
+      "dependencies": ["step_004"],
+      "handler": "primitive",
+      "primitiveType": "press_fit",
+      "primitiveParams": {"direction": [0, -1, 0], "force_target": 15, "max_distance": 0.02},
+      "policyId": null,
+      "successCriteria": {"type": "force_threshold", "threshold": 15},
+      "maxRetries": 2
+    }
+  },
+  "stepOrder": ["step_001", "step_002", "step_003", "step_004", "step_005"]
+}

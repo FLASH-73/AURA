@@ -8,12 +8,15 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { Assembly } from "@/lib/types";
-import { MOCK_ASSEMBLIES } from "@/lib/mock-data";
+import useSWR from "swr";
+import type { Assembly, AssemblySummary } from "@/lib/types";
+import { MOCK_ASSEMBLY, MOCK_SUMMARIES } from "@/lib/mock-data";
+import { api } from "@/lib/api";
 
 interface AssemblyContextValue {
-  assemblies: Assembly[];
+  assemblies: AssemblySummary[];
   assembly: Assembly | null;
+  isLoading: boolean;
   selectedStepId: string | null;
   selectStep: (stepId: string | null) => void;
   selectAssembly: (assemblyId: string) => void;
@@ -22,15 +25,21 @@ interface AssemblyContextValue {
 const AssemblyContext = createContext<AssemblyContextValue | null>(null);
 
 export function AssemblyProvider({ children }: { children: ReactNode }) {
-  const [assemblies] = useState<Assembly[]>(MOCK_ASSEMBLIES);
   const [assemblyId, setAssemblyId] = useState<string>(
-    MOCK_ASSEMBLIES[0]?.id ?? "",
+    MOCK_SUMMARIES[0]?.id ?? "",
   );
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
 
-  const assembly = useMemo(
-    () => assemblies.find((a) => a.id === assemblyId) ?? null,
-    [assemblies, assemblyId],
+  const { data: assemblies = MOCK_SUMMARIES } = useSWR<AssemblySummary[]>(
+    "/assemblies",
+    api.fetchAssemblySummaries,
+    { fallbackData: MOCK_SUMMARIES },
+  );
+
+  const { data: assembly = null, isLoading } = useSWR<Assembly>(
+    assemblyId ? `/assemblies/${assemblyId}` : null,
+    () => api.fetchAssembly(assemblyId),
+    { fallbackData: assemblyId === MOCK_ASSEMBLY.id ? MOCK_ASSEMBLY : undefined },
   );
 
   const selectStep = useCallback((stepId: string | null) => {
@@ -46,8 +55,8 @@ export function AssemblyProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<AssemblyContextValue>(
-    () => ({ assemblies, assembly, selectedStepId, selectStep, selectAssembly }),
-    [assemblies, assembly, selectedStepId, selectStep, selectAssembly],
+    () => ({ assemblies, assembly, isLoading, selectedStepId, selectStep, selectAssembly }),
+    [assemblies, assembly, isLoading, selectedStepId, selectStep, selectAssembly],
   );
 
   return (
