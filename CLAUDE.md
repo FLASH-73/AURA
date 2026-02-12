@@ -12,6 +12,25 @@
 
 ---
 
+## Legacy Codebase (v1)
+
+This project is a clean rebuild from an existing working system. The old codebase contains proven motor control, force feedback, and learning pipeline code that must be extracted — not rewritten from scratch.
+
+**Old repo:** https://github.com/FLASH-73/Nextis_Bridge
+
+When you need to extract code from the old system:
+```bash
+git clone https://github.com/FLASH-73/Nextis_Bridge.git /tmp/nextis-legacy
+```
+
+**Extraction guide:** See `docs/extraction-guide.md` in this repo for the complete file-by-file breakdown of what to copy, what to refactor, and what to drop. Follow it precisely — it was written after a thorough audit of every file in the old codebase.
+
+**Key rule:** When extracting, strip all `print()` statements, FastAPI coupling, and UI data publishing. Keep only the core algorithm. If a function references `self.recording_active`, `self.dataset`, or `self._frame_queue`, you're pulling in recording logic that belongs in `nextis/learning/recorder.py`, not in the control layer.
+
+**The old `teleop_service.py` is 2154 lines because it mixes control, recording, and UI.** In v2, the control loop is ~300 lines in `nextis/control/teleop_loop.py`. Recording subscribes to the loop's output. The UI polls the API. These are separate services.
+
+---
+
 ## Architecture Overview
 
 ```
@@ -489,43 +508,13 @@ Sequencer.start()
 
 ---
 
-## Frontend Guidelines
+## Frontend
 
-### Design Philosophy
+**See `docs/frontend.md` for complete design system, layout, and component guidelines.**
 
-**Industrial, functional, information-dense.** This is a robotics control interface, not a consumer app. Think mission control, not social media.
+The product name is **Manus**. The frontend is a bright, clean Next.js app — not a dark hacker tool. One main screen with a split layout: 3D assembly viewer + assembly DAG + step detail. Warm white background, color only where it carries information.
 
-- Dark theme only (operators work in workshops and labs)
-- Monospace for data, sans-serif for labels
-- Color coding: green = success/active, amber = warning/in-progress, red = failure/stopped, blue = autonomous, purple = human control
-- No animations except loading indicators and state transitions
-- No glassmorphism, no gradients, no rounded cards with shadows
-- Dense information display — operators want to see everything at once
-
-### Assembly Dashboard (Main Screen)
-
-This is the ONE screen that matters. It shows:
-1. **Assembly graph** — visual DAG with color-coded step status
-2. **Current step detail** — what's happening right now, live camera feed
-3. **Per-step metrics** — success rate bars for each step
-4. **Cycle time** — current run + historical average
-5. **Controls** — Start/Pause/Stop/Intervene buttons
-
-### Technology
-
-- Next.js 15 + React 19 (keep frontend simple, no elaborate state management)
-- Three.js via `@react-three/fiber` for 3D CAD viewer
-- Recharts for metrics graphs
-- Tailwind CSS for styling
-- WebSocket for real-time telemetry (not polling)
-
-### Component Rules
-
-- One component per file, max 200 lines
-- No prop drilling beyond 2 levels — use context or restructure
-- All API calls go through a single `api.ts` client
-- No `useEffect` for data fetching — use `useSWR` or React Server Components
-- TypeScript strict mode, no `any`
+Tech stack: Next.js 15, React 19, Tailwind CSS, `@react-three/fiber`, React Flow, Recharts, WebSocket for real-time data. TypeScript strict mode. No component libraries.
 
 ---
 
