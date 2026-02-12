@@ -1,13 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import useSWR from "swr";
 import { useAssembly } from "@/context/AssemblyContext";
 import { useExecution } from "@/context/ExecutionContext";
 import { MOCK_STEP_METRICS } from "@/lib/mock-data";
+import type { StepMetrics } from "@/lib/types";
 import { api } from "@/lib/api";
 import { ActionButton } from "./ActionButton";
 import { StatusBadge } from "./StatusBadge";
 import { MiniChart } from "./MiniChart";
+import { RecordingControls } from "./RecordingControls";
+import { DemoList } from "./DemoList";
+import { TrainingProgress } from "./TrainingProgress";
 
 function formatMs(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
@@ -17,8 +21,12 @@ function formatMs(ms: number): string {
 export function StepDetail() {
   const { assembly, selectedStepId } = useAssembly();
   const { executionState } = useExecution();
-  const [recordingLoading, setRecordingLoading] = useState(false);
-  const [trainingLoading, setTrainingLoading] = useState(false);
+
+  const { data: allMetrics } = useSWR<StepMetrics[]>(
+    assembly ? `/analytics/${assembly.id}/steps` : null,
+    () => api.getStepMetrics(assembly!.id),
+    { fallbackData: Object.values(MOCK_STEP_METRICS) },
+  );
 
   if (!assembly || !selectedStepId) {
     return (
@@ -33,10 +41,11 @@ export function StepDetail() {
   const step = assembly.steps[selectedStepId];
   if (!step) return null;
   const runtimeState = executionState.stepStates[selectedStepId];
-  const metrics = MOCK_STEP_METRICS[selectedStepId];
+  const metrics = allMetrics?.find((m) => m.stepId === selectedStepId);
 
   return (
-    <div className="flex flex-col gap-4 p-4">
+    <div className="flex flex-col gap-4 overflow-y-auto p-4">
+      {/* Header */}
       <div>
         <div className="flex items-center justify-between">
           <h2 className="text-[14px] font-semibold text-text-primary">
@@ -107,43 +116,26 @@ export function StepDetail() {
       {/* Mini success rate chart */}
       {metrics && <MiniChart runs={metrics.recentRuns} />}
 
-      {/* Actions */}
-      <div className="flex gap-2 pt-1">
-        <ActionButton
-          variant="secondary"
-          disabled={recordingLoading}
-          onClick={() => {
-            setRecordingLoading(true);
-            api
-              .startRecording(selectedStepId)
-              .catch(console.warn)
-              .finally(() => setRecordingLoading(false));
-          }}
-        >
-          {recordingLoading ? "Recording..." : "Record Demos"}
-        </ActionButton>
-        {step.handler === "policy" && (
-          <ActionButton
-            variant="primary"
-            disabled={trainingLoading}
-            onClick={() => {
-              setTrainingLoading(true);
-              api
-                .trainStep(selectedStepId, { architecture: "act", numSteps: 10_000 })
-                .catch(console.warn)
-                .finally(() => setTrainingLoading(false));
-            }}
-          >
-            {trainingLoading ? "Training..." : "Train"}
-          </ActionButton>
-        )}
-        <ActionButton
-          variant="secondary"
-          onClick={() => console.log("Test step:", selectedStepId)}
-        >
-          Test Step
-        </ActionButton>
-      </div>
+      {/* Recording controls */}
+      <RecordingControls stepId={selectedStepId} assemblyId={assembly.id} />
+
+      {/* Demo list */}
+      <DemoList assemblyId={assembly.id} stepId={selectedStepId} />
+
+      {/* Training progress */}
+      <TrainingProgress
+        stepId={selectedStepId}
+        handler={step.handler}
+        policyId={step.policyId}
+      />
+
+      {/* Test step */}
+      <ActionButton
+        variant="secondary"
+        onClick={() => console.log("Test step:", selectedStepId)}
+      >
+        Test Step
+      </ActionButton>
     </div>
   );
 }

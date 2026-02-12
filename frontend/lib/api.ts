@@ -1,8 +1,10 @@
 import type {
   Assembly,
   AssemblySummary,
+  Demo,
   ExecutionState,
   StepMetrics,
+  TeleopState,
   TrainConfig,
   TrainStatus,
   AssemblyStep,
@@ -28,6 +30,14 @@ async function post<T = void>(path: string, body?: unknown): Promise<T> {
     headers: { "Content-Type": "application/json" },
     body: body ? JSON.stringify(body) : undefined,
   });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json() as Promise<T>;
+}
+
+async function postFile<T>(path: string, file: File): Promise<T> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${BASE}${path}`, { method: "POST", body: form });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json() as Promise<T>;
 }
@@ -91,14 +101,33 @@ export const api = {
   // --- Teleop ---
   startTeleop: (arms: string[]) => post("/teleop/start", { arms }),
   stopTeleop: () => post("/teleop/stop"),
+  fetchTeleopState: () => get<TeleopState>("/teleop/state"),
+  getTeleopState: () =>
+    withMockFallback(
+      () => get<TeleopState>("/teleop/state"),
+      { active: false, arms: [] },
+    ),
 
   // --- Recording ---
   startRecording: (stepId: string) => post(`/recording/step/${stepId}/start`),
   stopRecording: () => post("/recording/stop"),
+  discardRecording: (stepId: string) => post(`/recording/step/${stepId}/discard`),
+  getDemos: (assemblyId: string, stepId: string) =>
+    withMockFallback(
+      () => get<Demo[]>(`/recording/demos/${assemblyId}/${stepId}`),
+      [],
+    ),
+  fetchDemos: (assemblyId: string, stepId: string) =>
+    get<Demo[]>(`/recording/demos/${assemblyId}/${stepId}`),
+  deleteDemo: (assemblyId: string, stepId: string, demoId: string) =>
+    post(`/recording/demos/${assemblyId}/${stepId}/${demoId}/delete`),
 
   // --- Training ---
   trainStep: (stepId: string, config: TrainConfig) =>
     post<TrainStatus>(`/training/step/${stepId}/train`, config),
   getTrainingStatus: (jobId: string) =>
     get<TrainStatus>(`/training/jobs/${jobId}`),
+
+  // --- Upload ---
+  uploadCAD: (file: File) => postFile<Assembly>("/assemblies/upload", file),
 };

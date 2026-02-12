@@ -13,7 +13,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from nextis.api.routes import analytics, assembly, execution
+from nextis.api.routes import analytics, assembly, execution, recording, teleop, training
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +30,9 @@ app.add_middleware(
 app.include_router(assembly.router, prefix="/assemblies", tags=["assemblies"])
 app.include_router(execution.router, prefix="/execution", tags=["execution"])
 app.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
+app.include_router(teleop.router, prefix="/teleop", tags=["teleop"])
+app.include_router(recording.router, prefix="/recording", tags=["recording"])
+app.include_router(training.router, prefix="/training", tags=["training"])
 
 # Serve GLB mesh files for the 3D assembly viewer
 _MESHES_DIR = Path(__file__).resolve().parents[2] / "data" / "meshes"

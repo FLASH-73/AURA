@@ -39,9 +39,7 @@ class ExecutionState(BaseModel):
     phase: str = "idle"
     assembly_id: str | None = Field(None, alias="assemblyId")
     current_step_id: str | None = Field(None, alias="currentStepId")
-    step_states: dict[str, StepRuntimeState] = Field(
-        default_factory=dict, alias="stepStates"
-    )
+    step_states: dict[str, StepRuntimeState] = Field(default_factory=dict, alias="stepStates")
     run_number: int = Field(0, alias="runNumber")
     start_time: float | None = Field(None, alias="startTime")
     elapsed_ms: float = Field(0, alias="elapsedMs")
@@ -69,3 +67,82 @@ class StepMetrics(BaseModel):
     total_attempts: int = Field(0, alias="totalAttempts")
     demo_count: int = Field(0, alias="demoCount")
     recent_runs: list[RunEntry] = Field(default_factory=list, alias="recentRuns")
+
+
+# ------------------------------------------------------------------
+# Teleop schemas
+# ------------------------------------------------------------------
+
+
+class TeleopStartRequest(BaseModel):
+    """Request body for starting teleoperation."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    arms: list[str] = Field(default_factory=lambda: ["default"])
+
+
+class TeleopState(BaseModel):
+    """Current teleoperation state."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    active: bool = False
+    arms: list[str] = Field(default_factory=list)
+    session_id: str | None = Field(None, alias="sessionId")
+    mock: bool = False
+    loop_count: int = Field(0, alias="loopCount")
+
+
+# ------------------------------------------------------------------
+# Recording schemas
+# ------------------------------------------------------------------
+
+
+class RecordingStartRequest(BaseModel):
+    """Request body for starting a recording session."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    assembly_id: str = Field(alias="assemblyId")
+
+
+class DemoInfo(BaseModel):
+    """Metadata about a recorded demonstration."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    demo_id: str = Field(alias="demoId")
+    assembly_id: str = Field(alias="assemblyId")
+    step_id: str = Field(alias="stepId")
+    num_frames: int = Field(0, alias="numFrames")
+    duration_s: float = Field(0.0, alias="durationS")
+    file_path: str = Field("", alias="filePath")
+    timestamp: float = 0.0
+
+
+# ------------------------------------------------------------------
+# Training schemas
+# ------------------------------------------------------------------
+
+
+class TrainRequest(BaseModel):
+    """Request body for launching step-policy training."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    architecture: str = "act"
+    num_steps: int = Field(10_000, alias="numSteps")
+    assembly_id: str = Field(alias="assemblyId")
+
+
+class TrainingJobState(BaseModel):
+    """State of a training job."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    job_id: str = Field(alias="jobId")
+    step_id: str = Field(alias="stepId")
+    status: str = "pending"
+    progress: float = 0.0
+    error: str | None = None

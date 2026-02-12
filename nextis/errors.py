@@ -28,3 +28,11 @@ class CADParseError(NextisError):
 
 class SafetyError(NextisError):
     """Safety limit exceeded -- motors will be disabled."""
+
+
+class RecordingError(NextisError):
+    """Demo recording failure -- file I/O or state error."""
+
+
+class TrainingError(NextisError):
+    """Policy training failure -- data, config, or training loop error."""

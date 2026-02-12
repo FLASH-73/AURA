@@ -108,3 +108,16 @@ export interface TrainStatus {
   loss: number | null;
   state: "queued" | "training" | "complete" | "failed";
 }
+
+export interface Demo {
+  id: string;
+  stepId: string;
+  assemblyId: string;
+  timestamp: number;
+  durationMs: number;
+}
+
+export interface TeleopState {
+  active: boolean;
+  arms: string[];
+}

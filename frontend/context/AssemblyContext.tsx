@@ -20,6 +20,7 @@ interface AssemblyContextValue {
   selectedStepId: string | null;
   selectStep: (stepId: string | null) => void;
   selectAssembly: (assemblyId: string) => void;
+  refreshAssemblies: () => void;
 }
 
 const AssemblyContext = createContext<AssemblyContextValue | null>(null);
@@ -30,11 +31,16 @@ export function AssemblyProvider({ children }: { children: ReactNode }) {
   );
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
 
-  const { data: assemblies = MOCK_SUMMARIES } = useSWR<AssemblySummary[]>(
-    "/assemblies",
-    api.fetchAssemblySummaries,
-    { fallbackData: MOCK_SUMMARIES },
-  );
+  const { data: assemblies = MOCK_SUMMARIES, mutate: mutateAssemblies } =
+    useSWR<AssemblySummary[]>(
+      "/assemblies",
+      api.fetchAssemblySummaries,
+      { fallbackData: MOCK_SUMMARIES },
+    );
+
+  const refreshAssemblies = useCallback(() => {
+    void mutateAssemblies();
+  }, [mutateAssemblies]);
 
   const { data: assembly = null, isLoading } = useSWR<Assembly>(
     assemblyId ? `/assemblies/${assemblyId}` : null,
@@ -55,8 +61,16 @@ export function AssemblyProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<AssemblyContextValue>(
-    () => ({ assemblies, assembly, isLoading, selectedStepId, selectStep, selectAssembly }),
-    [assemblies, assembly, isLoading, selectedStepId, selectStep, selectAssembly],
+    () => ({
+      assemblies,
+      assembly,
+      isLoading,
+      selectedStepId,
+      selectStep,
+      selectAssembly,
+      refreshAssemblies,
+    }),
+    [assemblies, assembly, isLoading, selectedStepId, selectStep, selectAssembly, refreshAssemblies],
   );
 
   return (

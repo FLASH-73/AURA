@@ -17,20 +17,34 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Optional imports
+# Optional imports — try OCP (pip: cadquery-ocp) first, then OCC (conda)
 # ---------------------------------------------------------------------------
 try:
-    from OCC.Core.Bnd import Bnd_Box
-    from OCC.Core.BRep import BRep_Tool
-    from OCC.Core.BRepBndLib import brepbndlib
-    from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
-    from OCC.Core.TopAbs import TopAbs_FACE
-    from OCC.Core.TopExp import TopExp_Explorer
-    from OCC.Core.TopLoc import TopLoc_Location
+    from OCP.Bnd import Bnd_Box
+    from OCP.BRep import BRep_Tool
+    from OCP.BRepBndLib import BRepBndLib as brepbndlib
+    from OCP.BRepMesh import BRepMesh_IncrementalMesh
+    from OCP.TopAbs import TopAbs_FACE
+    from OCP.TopoDS import TopoDS as _topods_cast
+    from OCP.TopExp import TopExp_Explorer
+    from OCP.TopLoc import TopLoc_Location
 
     HAS_OCC = True
 except ImportError:
-    HAS_OCC = False
+    try:
+        from OCC.Core.Bnd import Bnd_Box
+        from OCC.Core.BRep import BRep_Tool
+        from OCC.Core.BRepBndLib import brepbndlib
+        from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
+        from OCC.Core.TopAbs import TopAbs_FACE
+        from OCC.Core.TopExp import TopExp_Explorer
+        from OCC.Core.TopLoc import TopLoc_Location
+
+        _topods_cast = None  # pythonocc auto-downcasts
+        HAS_OCC = True
+    except ImportError:
+        HAS_OCC = False
+        _topods_cast = None
 
 try:
     import trimesh
@@ -38,6 +52,11 @@ try:
     HAS_TRIMESH = True
 except ImportError:
     HAS_TRIMESH = False
+
+
+def _static(cls: Any, method: str) -> Any:
+    """Get a static method from an OCC class, trying OCP '_s' suffix first."""
+    return getattr(cls, f"{method}_s", None) or getattr(cls, method)
 
 # ---------------------------------------------------------------------------
 # Colour palette for parts
@@ -149,7 +168,7 @@ def compute_bounding_box(
         (center_xyz, extents_xyz, [xmin, ymin, zmin, xmax, ymax, zmax])
     """
     box = Bnd_Box()
-    brepbndlib.Add(shape, box)
+    _static(brepbndlib, "Add")(shape, box)
     xmin, ymin, zmin, xmax, ymax, zmax = box.Get()
 
     center = [
@@ -205,8 +224,11 @@ def tessellate_to_glb(
         explorer = TopExp_Explorer(shape, TopAbs_FACE)
         while explorer.More():
             face = explorer.Current()
+            # OCP requires explicit downcast; pythonocc auto-downcasts
+            if _topods_cast is not None:
+                face = _static(_topods_cast, "Face")(face)
             loc = TopLoc_Location()
-            triangulation = BRep_Tool.Triangulation(face, loc)
+            triangulation = _static(BRep_Tool, "Triangulation")(face, loc)
 
             if triangulation is not None:
                 trsf = loc.Transformation()

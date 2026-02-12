@@ -17,6 +17,7 @@ import time
 from collections.abc import Callable
 from enum import Enum  # noqa: UP042
 
+from nextis.analytics.store import AnalyticsStore
 from nextis.api.schemas import ExecutionState, StepRuntimeState
 from nextis.assembly.models import AssemblyGraph, AssemblyStep
 from nextis.errors import AssemblyError
@@ -66,6 +67,7 @@ class Sequencer:
         graph: AssemblyGraph,
         on_state_change: Callable[[ExecutionState], None],
         router: PolicyRouter | None = None,
+        analytics: AnalyticsStore | None = None,
     ) -> None:
         if not graph.step_order:
             raise AssemblyError(f"Assembly '{graph.id}' has no steps to execute")
@@ -73,6 +75,7 @@ class Sequencer:
         self._graph = graph
         self._on_state_change = on_state_change
         self._router = router or PolicyRouter()
+        self._analytics = analytics
 
         self._state = SequencerState.IDLE
         self._step_index: int = 0
@@ -191,6 +194,14 @@ class Sequencer:
                 duration_ms=now - (self._step_states[step_id].start_time or now),
             )
             logger.info("Human completed step %s successfully", step_id)
+            if self._analytics is not None:
+                self._analytics.record_step_result(
+                    assembly_id=self._graph.id,
+                    step_id=step_id,
+                    success=True,
+                    duration_ms=self._step_states[step_id].duration_ms or 0.0,
+                    attempt=self._current_attempt,
+                )
         else:
             self._step_states[step_id] = StepRuntimeState(
                 step_id=step_id,
@@ -200,6 +211,14 @@ class Sequencer:
                 end_time=time.time() * 1000,
             )
             logger.warning("Human marked step %s as failed", step_id)
+            if self._analytics is not None:
+                self._analytics.record_step_result(
+                    assembly_id=self._graph.id,
+                    step_id=step_id,
+                    success=False,
+                    duration_ms=0.0,
+                    attempt=self._current_attempt,
+                )
 
         self._human_done_event.set()
 
@@ -269,6 +288,16 @@ class Sequencer:
                         break
 
                     result = await self._dispatch_step(step)
+
+                    # Record analytics for every dispatch attempt
+                    if self._analytics is not None:
+                        self._analytics.record_step_result(
+                            assembly_id=self._graph.id,
+                            step_id=step_id,
+                            success=result.success,
+                            duration_ms=result.duration_ms,
+                            attempt=self._current_attempt,
+                        )
 
                     if result.success:
                         now = time.time() * 1000

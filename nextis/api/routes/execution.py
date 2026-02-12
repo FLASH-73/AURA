@@ -13,6 +13,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, ConfigDict, Field
 
+from nextis.analytics.store import AnalyticsStore
 from nextis.api.schemas import ExecutionState
 from nextis.assembly.models import AssemblyGraph
 from nextis.control.primitives import PrimitiveLibrary
@@ -24,9 +25,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 CONFIGS_DIR = Path(__file__).resolve().parents[3] / "configs" / "assemblies"
+ANALYTICS_DIR = Path(__file__).resolve().parents[3] / "data" / "analytics"
 
 # Module-level state — only one execution at a time.
 _sequencer: Sequencer | None = None
+_analytics_store: AnalyticsStore | None = None
 _ws_connections: set[WebSocket] = set()
 
 
@@ -91,7 +94,7 @@ async def start_execution(request: StartRequest) -> dict[str, str]:
     Loads the assembly graph from disk, creates a Sequencer, and starts
     it as an asyncio task. Returns immediately.
     """
-    global _sequencer  # noqa: PLW0603
+    global _sequencer, _analytics_store  # noqa: PLW0603
 
     # Reject if already running
     if _sequencer is not None and _sequencer.state not in (
@@ -115,11 +118,13 @@ async def start_execution(request: StartRequest) -> dict[str, str]:
     # Build router with stub primitives (no real robot yet)
     primitives = PrimitiveLibrary()
     policy_router = PolicyRouter(primitive_library=primitives, robot=None)
+    _analytics_store = AnalyticsStore(root=ANALYTICS_DIR)
 
     _sequencer = Sequencer(
         graph=graph,
         on_state_change=_broadcast_state,
         router=policy_router,
+        analytics=_analytics_store,
     )
     await _sequencer.start()
     return {"status": "ok"}

@@ -1,11 +1,12 @@
 """CAD parser: STEP files → AssemblyGraph + GLB meshes.
 
-Reads STEP assembly files using PythonOCC, extracts part hierarchy with
-transforms, and detects inter-part contacts for dependency analysis.
+Reads STEP assembly files using OpenCASCADE (via OCP or pythonocc-core),
+extracts part hierarchy with transforms, and detects inter-part contacts.
 Mesh tessellation and geometry helpers live in mesh_utils.py.
 
-Requires pythonocc-core (install via conda, NOT pip):
-    conda install -c conda-forge pythonocc-core
+Install one of:
+    pip install cadquery-ocp-novtk    (recommended, fast)
+    conda install -c conda-forge pythonocc-core   (slower)
 """
 
 from __future__ import annotations
@@ -29,30 +30,53 @@ from nextis.errors import CADParseError
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Optional OCC imports — guarded so codebase loads without pythonocc-core
+# Optional OCC imports — try OCP (pip) first, then OCC.Core (conda)
 # ---------------------------------------------------------------------------
 try:
-    from OCC.Core.BRepExtrema import BRepExtrema_DistShapeShape
-    from OCC.Core.IFSelect import IFSelect_RetDone
-    from OCC.Core.STEPCAFControl import STEPCAFControl_Reader
-    from OCC.Core.STEPControl import STEPControl_Reader
-    from OCC.Core.TCollection import TCollection_ExtendedString
-    from OCC.Core.TDataStd import TDataStd_Name
-    from OCC.Core.TDF import TDF_Label, TDF_LabelSequence
-    from OCC.Core.TDocStd import TDocStd_Document
-    from OCC.Core.TopAbs import TopAbs_SOLID
-    from OCC.Core.TopExp import TopExp_Explorer
-    from OCC.Core.XCAFApp import XCAFApp_Application
-    from OCC.Core.XCAFDoc import XCAFDoc_DocumentTool
+    from OCP.BRepExtrema import BRepExtrema_DistShapeShape
+    from OCP.IFSelect import IFSelect_RetDone
+    from OCP.STEPCAFControl import STEPCAFControl_Reader
+    from OCP.STEPControl import STEPControl_Reader
+    from OCP.TCollection import TCollection_ExtendedString
+    from OCP.TDataStd import TDataStd_Name
+    from OCP.TDF import TDF_Label, TDF_LabelSequence
+    from OCP.TDocStd import TDocStd_Document
+    from OCP.TopAbs import TopAbs_SOLID
+    from OCP.TopExp import TopExp_Explorer
+    from OCP.XCAFApp import XCAFApp_Application
+    from OCP.XCAFDoc import XCAFDoc_DocumentTool, XCAFDoc_ShapeTool
 
     HAS_OCC = True
 except ImportError:
-    HAS_OCC = False
+    try:
+        from OCC.Core.BRepExtrema import BRepExtrema_DistShapeShape
+        from OCC.Core.IFSelect import IFSelect_RetDone
+        from OCC.Core.STEPCAFControl import STEPCAFControl_Reader
+        from OCC.Core.STEPControl import STEPControl_Reader
+        from OCC.Core.TCollection import TCollection_ExtendedString
+        from OCC.Core.TDataStd import TDataStd_Name
+        from OCC.Core.TDF import TDF_Label, TDF_LabelSequence
+        from OCC.Core.TDocStd import TDocStd_Document
+        from OCC.Core.TopAbs import TopAbs_SOLID
+        from OCC.Core.TopExp import TopExp_Explorer
+        from OCC.Core.XCAFApp import XCAFApp_Application
+        from OCC.Core.XCAFDoc import XCAFDoc_DocumentTool
+
+        XCAFDoc_ShapeTool = None  # pythonocc uses instance methods
+        HAS_OCC = True
+    except ImportError:
+        HAS_OCC = False
+        XCAFDoc_ShapeTool = None  # type: ignore[assignment]
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 _VALID_SUFFIXES = {".step", ".stp"}
+
+
+def _static(cls: Any, method: str) -> Any:
+    """Get a static method from an OCC class, trying OCP '_s' suffix first."""
+    return getattr(cls, f"{method}_s", None) or getattr(cls, method)
 
 
 # ---------------------------------------------------------------------------
@@ -212,7 +236,7 @@ class CADParser:
     def _extract_parts_xde(self, step_file: Path) -> list[_RawPart]:
         """Read STEP via XDE and walk the label tree for named parts."""
         try:
-            app = XCAFApp_Application.GetApplication()
+            app = _static(XCAFApp_Application, "GetApplication")()
             doc = TDocStd_Document(TCollection_ExtendedString("MDTV-XCAF"))
             app.NewDocument(TCollection_ExtendedString("MDTV-XCAF"), doc)
 
@@ -227,7 +251,7 @@ class CADParser:
                 logger.warning("XDE transfer failed for %s", step_file.name)
                 return []
 
-            shape_tool = XCAFDoc_DocumentTool.ShapeTool(doc.Main())
+            shape_tool = _static(XCAFDoc_DocumentTool, "ShapeTool")(doc.Main())
             labels = TDF_LabelSequence()
             shape_tool.GetFreeShapes(labels)
 
@@ -280,7 +304,7 @@ class CADParser:
         """Extract a human-readable name from a TDF_Label."""
         try:
             name_attr = TDataStd_Name()
-            if label.FindAttribute(TDataStd_Name.GetID(), name_attr):
+            if label.FindAttribute(_static(TDataStd_Name, "GetID")(), name_attr):
                 return name_attr.Get().ToExtString()
         except Exception:
             pass

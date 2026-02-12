@@ -1,7 +1,7 @@
 """Tests for the CAD parser and sequence planner.
 
-Requires pythonocc-core. All tests are skipped automatically when the
-library is not available.
+Requires OCP (pip: cadquery-ocp) or pythonocc-core (conda).
+All tests are skipped automatically when neither is available.
 """
 
 from __future__ import annotations
@@ -10,17 +10,23 @@ from pathlib import Path
 
 import pytest
 
-# Guard: skip all tests if OCC not installed
+# Guard: skip all tests if no OpenCASCADE bindings installed
 _occ_available = True
 try:
-    from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakeBox, BRepPrimAPI_MakeCylinder
-    from OCC.Core.gp import gp_Ax2, gp_Dir, gp_Pnt
-    from OCC.Core.IFSelect import IFSelect_RetDone
-    from OCC.Core.STEPControl import STEPControl_AsIs, STEPControl_Writer
+    from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox, BRepPrimAPI_MakeCylinder
+    from OCP.gp import gp_Ax2, gp_Dir, gp_Pnt
+    from OCP.IFSelect import IFSelect_RetDone
+    from OCP.STEPControl import STEPControl_AsIs, STEPControl_Writer
 except ImportError:
-    _occ_available = False
+    try:
+        from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakeBox, BRepPrimAPI_MakeCylinder
+        from OCC.Core.gp import gp_Ax2, gp_Dir, gp_Pnt
+        from OCC.Core.IFSelect import IFSelect_RetDone
+        from OCC.Core.STEPControl import STEPControl_AsIs, STEPControl_Writer
+    except ImportError:
+        _occ_available = False
 
-pytestmark = pytest.mark.skipif(not _occ_available, reason="pythonocc-core not installed")
+pytestmark = pytest.mark.skipif(not _occ_available, reason="OCP/pythonocc-core not installed")
 
 
 # ---------------------------------------------------------------------------

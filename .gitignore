@@ -61,3 +61,4 @@ data/meshes/
 
 # LeRobot submodule outputs
 lerobot/outputs/
+CAD_examples/*.step
