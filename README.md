@@ -1,34 +1,76 @@
-# Nextis Assembler v2
+# AURA — Autonomous Universal Robotic Assembly
 
-CAD-driven assembly automation platform. Upload a STEP file, the system plans the assembly, the robot builds it autonomously.
+**AURA is the brain. AIRA is the arm.**
 
-## Setup
+Upload a CAD file → auto-generate assembly plan → teach the hard steps → run autonomously.
 
-Requires Python 3.11+ and conda (for pythonocc-core).
+## What It Does
+
+1. **Parse** — Upload a STEP file, extract parts and geometry, export GLB meshes
+2. **Plan** — Auto-generate assembly sequence from contact analysis and heuristics
+3. **Teach** — Teleoperate hard steps with force feedback, record demonstrations
+4. **Learn** — Train per-step policies from demos (ACT, Diffusion Policy via LeRobot)
+5. **Run** — Execute assembly autonomously with retry + human fallback
+
+## Quick Start (Demo Mode)
 
 ```bash
-# Create conda environment
-conda create -n nextis python=3.11
+# Backend
 conda activate nextis
-
-# Install pythonocc-core (STEP/IGES parser, conda only)
-conda install -c conda-forge pythonocc-core
-
-# Install the package in development mode
 pip install -e ".[dev]"
+python scripts/demo.py
+
+# Frontend (separate terminal)
+cd frontend && npm install && npm run dev
 ```
+
+Open http://localhost:3000
+
+Press **Space** to start the assembly. The 57-step gearbox runs through stub primitives with real-time WebSocket state updates.
+
+## Stack
+
+- **Backend:** Python 3.11, FastAPI, Pydantic v2, PythonOCC (cadquery-ocp)
+- **Frontend:** Next.js 16, React 19, Three.js, Tailwind v4
+- **Learning:** LeRobot (coming)
+- **Hardware:** Damiao J8009P/J4340P/J4310 (CAN), Dynamixel XL330 (serial)
+
+## Project Structure
+
+```
+nextis/
+├── hardware/       # Motor control, arm registry, mock hardware
+├── control/        # 60Hz teleop loop, force feedback, primitives
+├── assembly/       # CAD parsing (STEP → GLB), assembly graph, sequence planning
+├── execution/      # Task sequencer, policy router, state machine
+├── learning/       # Per-step HDF5 recording (50Hz)
+├── analytics/      # JSON-backed per-step metrics
+├── perception/     # Step completion classifiers (planned)
+└── api/            # FastAPI — HTTP/WebSocket layer + routes
+frontend/           # Next.js dashboard (3D viewer, step list, controls)
+configs/            # Assembly JSON + arm YAML
+scripts/            # Demo launcher, utilities
+```
+
+**Central data model:** Everything is indexed by the assembly graph. Recording, training, execution, and analytics are all per-step.
+
+## Key Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /health` | Health check |
+| `GET /system/info` | Version, mode (mock/hardware), assembly count |
+| `GET /assemblies` | List assemblies |
+| `POST /assemblies/upload` | Upload STEP file → assembly graph + GLB meshes |
+| `POST /execution/start` | Start assembly (`assemblyId`, optional `speed`) |
+| `WS /execution/ws` | Real-time execution state |
 
 ## Development
 
 ```bash
-# Format and lint
 ruff check nextis/ tests/
 ruff format nextis/ tests/
-
-# Run tests
 pytest
 ```
 
-## Project Structure
-
-See [CLAUDE.md](CLAUDE.md) for full architecture documentation and [docs/extraction-guide.md](docs/extraction-guide.md) for migration details.
+See [CLAUDE.md](CLAUDE.md) for full architecture documentation.

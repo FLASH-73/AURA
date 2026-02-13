@@ -354,9 +354,67 @@ See the **3D Assembly Viewer — Detailed Specification** section above for full
 Floating overlay during execution:
 - Bottom-left of 3D viewer, ~25% viewer width
 - Rounded corners (8px), subtle drop shadow (0 2px 8px rgba(0,0,0,0.08))
-- Click to expand / collapse
+- Click to expand / collapse (25% → 60% of viewer)
 - Camera selector tabs if multiple feeds
 - Green/red streaming status dot
+
+### Upload Dialog
+
+Modal triggered by "+" button in TopBar:
+- Drag-and-drop zone for `.step` / `.stp` files
+- File input fallback
+- States: idle → uploading (spinner) → error
+- Calls `POST /assemblies/upload` with FormData
+- On success: closes, triggers assembly list refresh, selects new assembly
+- Close on Escape key or overlay click
+
+### Recording Controls
+
+Shown in StepDetail panel when a step is selected:
+- "Record Demos" button starts teleop + recording (`POST /recording/step/{stepId}/start`)
+- Elapsed timer (MM:SS format) during active recording
+- "Stop Recording" flushes to HDF5, "Discard" abandons
+- Shows demo count for current step
+
+### Demo List
+
+Below RecordingControls in StepDetail:
+- Lists all recorded demos for the selected step
+- Each row: timestamp, duration, delete button
+- Fetches from `GET /recording/demos/{assemblyId}/{stepId}`
+- Empty state: "No demos recorded yet"
+
+### Training Progress
+
+Shown in StepDetail for policy-type steps:
+- "Train Policy" button → `POST /training/step/{stepId}/train`
+- Polls `GET /training/jobs/{jobId}` every 2s during training
+- Shows: progress %, loss sparkline (Recharts AreaChart), status
+- States: idle → training (with progress) → complete (policy ID) → failed
+
+### Mini Chart
+
+Small inline chart used in StepDetail metrics:
+- Recharts AreaChart showing recent run success/failure
+- Maps runs to 1 (success) / 0 (failure) values
+- Minimal: no axes, no labels, just the shape
+
+### Animation System
+
+Pure logic in `lib/animation.ts` (no React or Three.js dependencies):
+- Phase machine: `idle → demo_fadein → demo_hold → demo_explode → demo_assemble → playing → scrubbing`
+- Per-part render state: `{ position, opacity, visualState }` computed by `computePartAnimation()`
+- Easing: cubic ease-in-out
+- Scrubber: bidirectional `scrubberToStep()` / `stepToScrubber()` mapping
+
+`lib/useAnimationControls.ts` — React hook wrapping animation state:
+- Returns: `toggleAnimation`, `stepForward`, `stepBackward`, `replayDemo`, `scrubStart`, `scrub`, `scrubEnd`, `forceIdle`
+- Auto-plays demo on assembly change
+
+`viewer/AnimationController.tsx` — Renderless component inside Canvas:
+- `useFrame` callback ticks phase machine every frame
+- Writes to shared refs (not React state) for 60fps performance
+- Computes centroid and explode offsets on part change
 
 ---
 
@@ -365,22 +423,20 @@ Floating overlay during execution:
 ```json
 {
   "dependencies": {
-    "next": "^15.0.0",
+    "next": "^16.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "@react-three/fiber": "^9.0.0",
     "@react-three/drei": "^10.0.0",
-    "three": "^0.170.0",
-    "reactflow": "^12.0.0",
-    "recharts": "^2.12.0",
+    "three": "^0.182.0",
+    "recharts": "^3.7.0",
     "tailwindcss": "^4.0.0",
-    "swr": "^2.2.0",
-    "geist": "^1.3.0"
+    "swr": "^2.4.0"
   },
   "devDependencies": {
     "typescript": "^5.5.0",
     "@types/react": "^19.0.0",
-    "@types/three": "^0.170.0"
+    "@types/three": "^0.182.0"
   }
 }
 ```
@@ -389,7 +445,7 @@ Floating overlay during execution:
 
 - **TypeScript strict mode.** No `any`. No `// @ts-ignore`.
 - **One component per file**, max 200 lines. If it's bigger, split it.
-- **No component libraries** (no shadcn, no MUI, no Chakra). Hand-craft the ~15 components you need. They'll be simpler and more cohesive.
+- **No component libraries** (no shadcn, no MUI, no Chakra). Hand-craft the ~25 components you need. They'll be simpler and more cohesive.
 - **No prop drilling** beyond 2 levels. Use React context for shared state (assembly, execution status, WebSocket connection).
 - **Data fetching:** `useSWR` for polling data (metrics, step status). WebSocket for real-time streams (motor telemetry, camera feeds).
 - **No `useEffect` for data fetching.** Use SWR or Server Components.
@@ -400,41 +456,54 @@ Floating overlay during execution:
 ```
 frontend/
 ├── app/
-│   ├── layout.tsx              # Root layout with providers
+│   ├── layout.tsx              # Root layout with Providers wrapper
 │   ├── page.tsx                # Assembly dashboard (main + only screen)
-│   └── globals.css             # CSS variables, Tailwind config
+│   └── globals.css             # Tailwind v4 @theme inline + color tokens
 ├── components/
-│   ├── TopBar.tsx              # AURA wordmark, assembly selector, controls
-│   ├── BottomBar.tsx           # Metrics strip
-│   ├── viewer/
-│   │   ├── AssemblyViewer.tsx  # Main Three.js canvas + scene setup
-│   │   ├── PartMesh.tsx        # Single part: ghost/active/complete/selected states
-│   │   ├── ApproachVector.tsx  # Arrow showing insertion direction
-│   │   ├── GraspPoint.tsx      # Grasp pose indicator sphere
-│   │   ├── GroundPlane.tsx     # Grid + contact shadows
-│   │   ├── ViewerControls.tsx  # Overlay buttons (reset, wireframe, explode, play)
-│   │   └── AnimationTimeline.tsx # Thin scrubber bar for stepping through sequence
-│   ├── CameraPiP.tsx           # Picture-in-picture camera overlay
-│   ├── StepList.tsx            # Assembly steps list
-│   ├── StepCard.tsx            # Individual step card
-│   ├── StepDetail.tsx          # Selected step info + actions
-│   ├── MetricCard.tsx          # Single metric display
-│   ├── StatusBadge.tsx         # Step status pill
-│   ├── ActionButton.tsx        # Primary / secondary / danger buttons
-│   ├── RunControls.tsx         # Start / pause / stop / intervene
-│   └── TeachingOverlay.tsx     # Full-screen camera during teleop recording
+│   ├── Providers.tsx           # SWR + WebSocket + Assembly + Execution context nesting
+│   ├── TopBar.tsx              # AURA wordmark, assembly selector, upload, controls
+│   ├── BottomBar.tsx           # Metrics strip + teleop indicator
+│   ├── DemoBanner.tsx          # "Demo Mode" banner when no hardware connected
+│   ├── RunControls.tsx         # Start / pause / resume / stop / intervene / E-stop
+│   ├── UploadDialog.tsx        # Modal: drag-drop .step/.stp upload → POST /assemblies/upload
+│   ├── StepList.tsx            # Assembly steps list with auto-scroll
+│   ├── StepCard.tsx            # Individual step card (status icon, badge, duration)
+│   ├── StepDetail.tsx          # Selected step info + metrics + recording + training
+│   ├── RecordingControls.tsx   # Start/stop/discard recording with elapsed timer
+│   ├── DemoList.tsx            # Recorded demos with timestamps and delete
+│   ├── TrainingProgress.tsx    # Train button, polling progress, loss sparkline
+│   ├── MetricCard.tsx          # Single metric display (label, value, context)
+│   ├── MiniChart.tsx           # Recharts AreaChart for success/failure history
+│   ├── StatusBadge.tsx         # Step status pill (pending/running/success/failed/human/retrying)
+│   ├── ActionButton.tsx        # Primary / secondary / danger variants
+│   ├── CameraPiP.tsx           # Picture-in-picture camera overlay (placeholder)
+│   ├── TeachingOverlay.tsx     # Full-screen camera during teleop recording
+│   └── viewer/
+│       ├── AssemblyViewer.tsx  # Main Three.js canvas + scene setup
+│       ├── PartMesh.tsx        # Single part: ghost/active/complete/selected states
+│       ├── AnimationController.tsx # Renderless: ticks phase machine at 60fps via useFrame
+│       ├── ViewerControls.tsx  # Overlay buttons (reset, wireframe, explode, play, step)
+│       ├── AnimationTimeline.tsx # Draggable scrubber bar with step dots
+│       ├── GroundPlane.tsx     # Grid + contact shadows
+│       ├── ApproachVector.tsx  # Arrow showing insertion direction
+│       └── GraspPoint.tsx      # Grasp pose indicator sphere
 ├── context/
-│   ├── AssemblyContext.tsx      # Current assembly graph + selected step
-│   ├── ExecutionContext.tsx     # Sequencer state, current step, metrics
-│   └── WebSocketContext.tsx     # Real-time connection management
+│   ├── AssemblyContext.tsx      # SWR-backed assembly + step selection
+│   ├── ExecutionContext.tsx     # Sequencer state (WebSocket or mock timer fallback)
+│   └── WebSocketContext.tsx     # Real-time connection with mock heartbeat fallback
 ├── lib/
-│   ├── api.ts                  # All API calls (one file, typed)
-│   ├── types.ts                # Shared TypeScript types
-│   └── ws.ts                   # WebSocket client
+│   ├── types.ts                # Shared TypeScript types (mirrors backend models)
+│   ├── api.ts                  # All API calls + withMockFallback() wrapper
+│   ├── ws.ts                   # AuraWebSocket class with graceful degradation
+│   ├── animation.ts            # Pure animation logic (no React/Three.js deps)
+│   ├── useAnimationControls.ts # React hook for 3D viewer animation state
+│   ├── hooks.ts                # useKeyboardShortcuts, useConnectionStatus
+│   └── mock-data.ts            # Mock assembly, execution state, metrics
 ├── package.json
-├── tailwind.config.ts
 └── tsconfig.json
 ```
+
+Note: Tailwind v4 uses `@theme inline` in `globals.css` — there is no `tailwind.config.ts`.
 
 ### API Client Pattern
 
@@ -442,9 +511,16 @@ frontend/
 // lib/api.ts
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+// All fetches use withMockFallback() — catches TypeError (network unavailable)
+// and returns mock data from lib/mock-data.ts. HTTP errors are NOT caught.
+
 export const api = {
+  // Health / System
+  health: () => get<{ status: string }>("/health"),
+  fetchSystemInfo: () => get<SystemInfo>("/system/info"),
+
   // Assembly
-  getAssemblies: () => get<Assembly[]>("/assemblies"),
+  getAssemblies: () => get<AssemblySummary[]>("/assemblies"),
   getAssembly: (id: string) => get<Assembly>(`/assemblies/${id}`),
   uploadCAD: (file: File) => postFile<Assembly>("/assemblies/upload", file),
   updateStep: (assemblyId: string, stepId: string, data: Partial<AssemblyStep>) =>
@@ -453,26 +529,32 @@ export const api = {
   // Execution
   startAssembly: (id: string) => post(`/execution/start`, { assembly_id: id }),
   pauseExecution: () => post("/execution/pause"),
+  resumeExecution: () => post("/execution/resume"),
   stopExecution: () => post("/execution/stop"),
   intervene: () => post("/execution/intervene"),
   getExecutionState: () => get<ExecutionState>("/execution/state"),
 
   // Teleop
-  startTeleop: (arms: string[]) => post("/teleop/start", { arms }),
+  startTeleop: (arms: string[], mock?: boolean) => post("/teleop/start", { arms }, mock),
   stopTeleop: () => post("/teleop/stop"),
+  getTeleopState: () => get<TeleopState>("/teleop/state"),
 
   // Recording
-  startRecording: (stepId: string) => post(`/recording/step/${stepId}/start`),
+  startRecording: (stepId: string, assemblyId: string) =>
+    post(`/recording/step/${stepId}/start`, { assembly_id: assemblyId }),
   stopRecording: () => post("/recording/stop"),
+  discardRecording: () => post("/recording/discard"),
+  listDemos: (assemblyId: string, stepId: string) =>
+    get<DemoInfo[]>(`/recording/demos/${assemblyId}/${stepId}`),
 
-  // Training
+  // Training (STUBBED on backend)
   trainStep: (stepId: string, config: TrainConfig) =>
     post(`/training/step/${stepId}/train`, config),
-  getTrainingStatus: (jobId: string) => get<TrainStatus>(`/training/jobs/${jobId}`),
+  getTrainingJob: (jobId: string) => get<TrainStatus>(`/training/jobs/${jobId}`),
+  listTrainingJobs: () => get<TrainStatus[]>("/training/jobs"),
 
   // Analytics
   getStepMetrics: (assemblyId: string) => get<StepMetrics[]>(`/analytics/${assemblyId}/steps`),
-  getCycleTime: (assemblyId: string) => get<CycleTime>(`/analytics/${assemblyId}/cycle-time`),
 };
 ```
 
