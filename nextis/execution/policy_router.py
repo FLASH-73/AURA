@@ -148,9 +148,23 @@ class PolicyRouter:
                 robot.send_action(action_dict)
                 await asyncio.sleep(1 / 50)  # 50 Hz control rate
 
+            elapsed = time.monotonic() * 1000 - start_ms
+
+            # In mock mode, generate realistic telemetry for the verifier.
+            if self._robot is None:
+                mock_data = robot.generate_execution_data(step)
+                return StepResult(
+                    success=True,
+                    duration_ms=elapsed,
+                    handler_used="policy",
+                    actual_force=mock_data.peak_force,
+                    actual_position=mock_data.final_position,
+                    force_history=[[f] for f in mock_data.force_history],
+                )
+
             return StepResult(
                 success=True,
-                duration_ms=time.monotonic() * 1000 - start_ms,
+                duration_ms=elapsed,
                 handler_used="policy",
             )
 
@@ -205,9 +219,23 @@ class PolicyRouter:
                 robot.send_action(joints_to_action(action.tolist()))
                 await asyncio.sleep(1 / 50)
 
+            elapsed = time.monotonic() * 1000 - start_ms
+
+            # In mock mode, generate realistic telemetry for the verifier.
+            if self._robot is None:
+                mock_data = robot.generate_execution_data(step)
+                return StepResult(
+                    success=True,
+                    duration_ms=elapsed,
+                    handler_used="rl_finetune",
+                    actual_force=mock_data.peak_force,
+                    actual_position=mock_data.final_position,
+                    force_history=[[f] for f in mock_data.force_history],
+                )
+
             return StepResult(
                 success=True,
-                duration_ms=time.monotonic() * 1000 - start_ms,
+                duration_ms=elapsed,
                 handler_used="rl_finetune",
             )
 

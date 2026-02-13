@@ -304,6 +304,7 @@ class Sequencer:
                             final_position=result.actual_position,
                             force_history=magnitudes,
                             peak_force=result.actual_force,
+                            final_force=magnitudes[-1] if magnitudes else 0.0,
                             duration_ms=result.duration_ms,
                         )
                         vr = await self._verifier.verify(step, exec_data)

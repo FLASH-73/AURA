@@ -264,6 +264,21 @@ def tessellate_to_glb(
 
         verts = np.array(all_verts, dtype=np.float64)
         faces = np.array(all_faces, dtype=np.int64)
+
+        # Center vertices at local origin so Part.position is the sole placement.
+        # OCC face transforms may include assembly-level placement, causing
+        # double-positioning when the frontend also applies Part.position.
+        centroid = verts.mean(axis=0)
+        if np.linalg.norm(centroid) > 1e-6:
+            verts -= centroid
+            logger.debug(
+                "Recentered %s by [%.6f, %.6f, %.6f]",
+                output_path.name,
+                centroid[0],
+                centroid[1],
+                centroid[2],
+            )
+
         mesh = trimesh.Trimesh(vertices=verts, faces=faces)
         mesh.export(str(output_path), file_type="glb")
         logger.debug(
