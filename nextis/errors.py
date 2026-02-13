@@ -36,3 +36,7 @@ class RecordingError(NextisError):
 
 class TrainingError(NextisError):
     """Policy training failure -- data, config, or training loop error."""
+
+
+class PlannerError(NextisError):
+    """AI planner failure -- API call, parse, or configuration error."""

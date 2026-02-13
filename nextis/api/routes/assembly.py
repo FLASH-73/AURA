@@ -14,9 +14,9 @@ from typing import Any
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
-from nextis.api.schemas import AssemblySummary
+from nextis.api.schemas import AssemblySummary, PlanAnalysisResponse, PlanSuggestionResponse
 from nextis.assembly.models import AssemblyGraph
-from nextis.errors import CADParseError
+from nextis.errors import CADParseError, PlannerError
 
 logger = logging.getLogger(__name__)
 
@@ -180,3 +180,88 @@ async def upload_step_file(file: UploadFile = File(...)) -> dict[str, Any]:  # n
         raise HTTPException(status_code=500, detail="Internal parsing error") from e
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+@router.post("/{assembly_id}/analyze", response_model=PlanAnalysisResponse)
+async def analyze_assembly(
+    assembly_id: str,
+    apply: bool = False,
+) -> PlanAnalysisResponse:
+    """Run AI analysis on an assembly plan.
+
+    Sends the assembly graph to Claude for review and returns suggested
+    improvements to step ordering, handler selection, and parameters.
+
+    Args:
+        assembly_id: The assembly to analyze.
+        apply: If True, automatically apply safe suggestions and save.
+    """
+    graph = _load_assembly(assembly_id)
+
+    try:
+        from nextis.assembly.ai_planner import AIPlanner
+
+        planner = AIPlanner()
+        analysis = await planner.analyze(graph)
+    except PlannerError as e:
+        if "not set" in str(e) or "not installed" in str(e):
+            raise HTTPException(status_code=503, detail=str(e)) from e
+        raise HTTPException(status_code=422, detail=str(e)) from e
+
+    if apply and analysis.suggestions:
+        _apply_suggestions(graph, analysis.suggestions)
+        path = CONFIGS_DIR / f"{assembly_id}.json"
+        graph.to_json_file(path)
+        logger.info("Applied %d AI suggestions to %s", len(analysis.suggestions), assembly_id)
+
+    return PlanAnalysisResponse(
+        suggestions=[
+            PlanSuggestionResponse(
+                step_id=s.step_id,
+                field=s.field,
+                old_value=s.old_value,
+                new_value=s.new_value,
+                reason=s.reason,
+            )
+            for s in analysis.suggestions
+        ],
+        warnings=analysis.warnings,
+        difficulty_score=analysis.difficulty_score,
+        estimated_teaching_minutes=analysis.estimated_teaching_minutes,
+        summary=analysis.summary,
+    )
+
+
+def _apply_suggestions(
+    graph: AssemblyGraph,
+    suggestions: list[Any],
+) -> None:
+    """Apply AI suggestions to the assembly graph in-place.
+
+    Only modifies a whitelist of safe fields: handler, primitiveType,
+    maxRetries, name. Skips unknown step_ids or unrecognized fields.
+    """
+    field_map = {
+        "handler": "handler",
+        "primitiveType": "primitive_type",
+        "primitive_type": "primitive_type",
+        "maxRetries": "max_retries",
+        "max_retries": "max_retries",
+        "name": "name",
+    }
+
+    for s in suggestions:
+        if s.step_id not in graph.steps:
+            logger.warning("Skipping suggestion for unknown step %s", s.step_id)
+            continue
+
+        attr = field_map.get(s.field)
+        if attr is None:
+            logger.warning("Skipping suggestion for unsupported field %s", s.field)
+            continue
+
+        step = graph.steps[s.step_id]
+        current = getattr(step, attr)
+        new_value: Any = int(s.new_value) if attr == "max_retries" else s.new_value
+        setattr(step, attr, new_value)
+        logger.info("Applied: %s.%s: %s -> %s", s.step_id, attr, current, new_value)

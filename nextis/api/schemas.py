@@ -146,3 +146,32 @@ class TrainingJobState(BaseModel):
     status: str = "pending"
     progress: float = 0.0
     error: str | None = None
+
+
+# ------------------------------------------------------------------
+# AI Planning schemas
+# ------------------------------------------------------------------
+
+
+class PlanSuggestionResponse(BaseModel):
+    """A single AI-suggested change to the assembly plan."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    step_id: str = Field(alias="stepId")
+    field: str
+    old_value: str = Field(alias="oldValue")
+    new_value: str = Field(alias="newValue")
+    reason: str
+
+
+class PlanAnalysisResponse(BaseModel):
+    """Full AI analysis of an assembly plan."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    suggestions: list[PlanSuggestionResponse] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    difficulty_score: int = Field(5, alias="difficultyScore")
+    estimated_teaching_minutes: int = Field(0, alias="estimatedTeachingMinutes")
+    summary: str = ""

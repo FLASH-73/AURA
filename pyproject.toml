@@ -26,6 +26,7 @@ dependencies = [
     "pyyaml",
     "trimesh",
     "h5py",
+    "anthropic",
 ]
 
 [project.optional-dependencies]
