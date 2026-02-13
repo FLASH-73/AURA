@@ -65,9 +65,12 @@ class MockBus:
 
 
 class MockRobot:
-    """Fake follower robot with smooth sine-wave trajectories.
+    """Fake follower robot that obeys sent commands.
 
-    Satisfies the robot interface consumed by TeleopLoop and SafetyLayer.
+    When :meth:`send_action` has been called, subsequent :meth:`get_observation`
+    calls return the commanded positions (mimicking a real robot that tracks
+    commands). Before any action is sent, returns smooth sine-wave trajectories
+    for backward compatibility with TeleopLoop tests.
     """
 
     def __init__(self) -> None:
@@ -77,16 +80,25 @@ class MockRobot:
         }
         self.is_connected: bool = True
         self._start_time = time.monotonic()
+        self._commanded: dict[str, float] | None = None
 
     def get_observation(self) -> dict[str, float]:
-        """Return smooth sine-wave positions for each joint."""
+        """Return joint positions.
+
+        If :meth:`send_action` has been called, returns the last commanded
+        positions (the robot "obeys"). Otherwise returns sine-wave positions
+        for passive observation scenarios (e.g. TeleopLoop).
+        """
+        if self._commanded is not None:
+            return dict(self._commanded)
         t = time.monotonic() - self._start_time
         return {
             f"{n}.pos": math.sin(t * 0.5 + i * 0.5) * 0.3 for i, n in enumerate(MOCK_JOINT_NAMES)
         }
 
     def send_action(self, action: dict[str, float]) -> None:
-        """Accept action and update bus positions."""
+        """Accept action, update bus positions and commanded state."""
+        self._commanded = dict(action)
         for key, val in action.items():
             self.bus._last_positions[key.replace(".pos", "")] = val
 
