@@ -85,8 +85,12 @@ export function PartMesh({
     const rs = renderStatesRef.current?.[part.id];
     if (!groupRef.current || !rs) return;
 
-    // Position
+    // Position + rotation
     groupRef.current.position.set(rs.position[0], rs.position[1], rs.position[2]);
+    const rot = part.rotation;
+    if (rot) {
+      groupRef.current.rotation.set(rot[0], rot[1], rot[2]);
+    }
 
     // Determine effective state — selection overrides animation
     const isSelected = selectedStepId != null && selectedStepId === firstStepIdForPart;

@@ -15,6 +15,7 @@ import {
   tickPhase,
   computeExplodeOffset,
   computeCentroid,
+  computeAssemblyRadius,
   computePartAnimation,
   easeInOut,
   stepToScrubber,
@@ -43,15 +44,17 @@ export function AnimationController({
   onPhaseChange,
 }: AnimationControllerProps) {
   const centroidRef = useRef<Vec3>([0, 0, 0]);
+  const radiusRef = useRef(0.1);
   const explodeOffsetsRef = useRef<Record<string, Vec3>>({});
   const explodeTRef = useRef(0);
 
   // Recompute when parts change
   useEffect(() => {
     centroidRef.current = computeCentroid(parts);
+    radiusRef.current = computeAssemblyRadius(parts, centroidRef.current);
     const offsets: Record<string, Vec3> = {};
     for (const p of parts) {
-      offsets[p.id] = computeExplodeOffset(p, centroidRef.current);
+      offsets[p.id] = computeExplodeOffset(p, centroidRef.current, radiusRef.current);
     }
     explodeOffsetsRef.current = offsets;
   }, [parts]);
@@ -88,7 +91,7 @@ export function AnimationController({
     const result: Record<string, PartRenderState> = {};
 
     for (const part of parts) {
-      const anim = computePartAnimation(part, next, stepOrder, steps);
+      const anim = computePartAnimation(part, next, stepOrder, steps, radiusRef.current);
       const explodeOff = explodeOffsetsRef.current[part.id] ?? [0, 0, 0];
 
       result[part.id] = {

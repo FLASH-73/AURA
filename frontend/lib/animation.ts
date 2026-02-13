@@ -79,11 +79,28 @@ export function computeCentroid(parts: Part[]): Vec3 {
   return [sx / n, sy / n, sz / n];
 }
 
-export function computeExplodeOffset(part: Part, centroid: Vec3): Vec3 {
+/** Max distance from centroid to any part — used to scale offsets. */
+export function computeAssemblyRadius(parts: Part[], centroid: Vec3): number {
+  let maxR = 0;
+  for (const p of parts) {
+    const v = vec3(p.position);
+    const dx = v[0] - centroid[0];
+    const dy = v[1] - centroid[1];
+    const dz = v[2] - centroid[2];
+    maxR = Math.max(maxR, Math.sqrt(dx * dx + dy * dy + dz * dz));
+  }
+  return maxR || 0.1;
+}
+
+export function computeExplodeOffset(
+  part: Part,
+  centroid: Vec3,
+  assemblyRadius: number,
+): Vec3 {
   const pos = vec3(part.position);
   const dims = vec3(part.dimensions ?? [0.05, 0.05, 0.05]);
   const maxDim = Math.max(dims[0], dims[1], dims[2]);
-  const dist = maxDim * 2.5;
+  const dist = Math.max(maxDim * 2.5, assemblyRadius * 0.4);
 
   const dx = pos[0] - centroid[0];
   const dy = pos[1] - centroid[1];
@@ -98,13 +115,13 @@ export function computeExplodeOffset(part: Part, centroid: Vec3): Vec3 {
   return [(dx / len) * dist, (dy / len) * dist, (dz / len) * dist];
 }
 
-/** Approach position: offset along inverted approach vector, 3× max dim. */
-export function approachPosition(part: Part): Vec3 {
+/** Approach position: offset along inverted approach vector. */
+export function approachPosition(part: Part, assemblyRadius: number): Vec3 {
   const base = vec3(part.position);
   const a = vec3(part.graspPoints[0]?.approach);
   const ax = a[0] || 0, ay = a[1] || -1, az = a[2] || 0;
   const dims = vec3(part.dimensions ?? [0.05, 0.05, 0.05]);
-  const d = Math.max(dims[0], dims[1], dims[2]) * 3;
+  const d = Math.max(Math.max(dims[0], dims[1], dims[2]) * 3, assemblyRadius * 0.5);
   return [base[0] - ax * d, base[1] - ay * d, base[2] - az * d];
 }
 
@@ -195,6 +212,7 @@ export function computePartAnimation(
   state: AnimationState,
   stepOrder: string[],
   steps: Record<string, { partIds: string[] }>,
+  assemblyRadius: number,
 ): PartRenderState {
   const base: Vec3 = (part.position as Vec3 | undefined) ?? [0, 0, 0];
 
@@ -205,7 +223,6 @@ export function computePartAnimation(
 
   // Fade-in — sequential opacity
   if (state.phase === "demo_fadein") {
-    const parts = Object.keys(steps).length; // rough count for index
     const idx = partStepIndex(part.id, stepOrder, steps);
     const partIdx = idx >= 0 ? idx : 0;
     const fadeStart = partIdx * TIMING.DEMO_FADEIN_PER_PART;
@@ -233,7 +250,7 @@ export function computePartAnimation(
   }
   if (psi === state.stepIndex) {
     const t = easeInOut(state.stepProgress);
-    const ap = approachPosition(part);
+    const ap = approachPosition(part, assemblyRadius);
     const pos: Vec3 = [
       ap[0] + (base[0] - ap[0]) * t,
       ap[1] + (base[1] - ap[1]) * t,
@@ -242,7 +259,7 @@ export function computePartAnimation(
     return { position: pos, opacity: 0.3 + 0.7 * t, visualState: "active" };
   }
   // Future step — at approach position, ghost
-  return { position: approachPosition(part), opacity: 0.15, visualState: "ghost" };
+  return { position: approachPosition(part, assemblyRadius), opacity: 0.15, visualState: "ghost" };
 }
 
 // ---------------------------------------------------------------------------
