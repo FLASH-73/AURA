@@ -50,8 +50,9 @@ export const INITIAL_EXEC_ANIM: ExecutionAnimState = {
 
 export const EXEC_TIMING = {
   STEP_MOTION_DURATION: 1.5,
-  STEP_TRANSITION_PAUSE: 0.2,
+  STEP_TRANSITION_PAUSE: 0.3,
   SUCCESS_FLASH_DURATION: 0.3,
+  SUCCESS_SETTLE_DURATION: 0.2, // ease final motion on success
   FAILURE_FLASH_DURATION: 0.5,
   HUMAN_PULSE_SPEED: 2.0,
   PRESS_FIT_BOUNCE_AMPLITUDE: 0.3, // fraction of offset distance
@@ -75,7 +76,7 @@ export function primitiveApproachOffset(
   const base: Vec3 = vec3(part.position);
   const dims = vec3(part.dimensions ?? [0.05, 0.05, 0.05]);
   const maxDim = Math.max(dims[0], dims[1], dims[2]);
-  const offset = Math.max(maxDim * 3, assemblyRadius * 0.5);
+  const offset = Math.max(maxDim * 2, assemblyRadius * 0.15);
 
   const pType = step?.primitiveType ?? "";
 
@@ -141,11 +142,16 @@ export function tickExecutionAnim(
     const statusChanged = prevAnim?.status !== runtimeState.status;
 
     if (!prevAnim || statusChanged) {
+      // Preserve motionProgress on success so we can ease the final distance
+      const preserveOnSuccess =
+        statusChanged && runtimeState.status === "success";
       next.stepAnims[stepId] = {
         stepId,
         status: runtimeState.status,
         statusTime: 0,
-        motionProgress: statusChanged ? 0 : (prevAnim?.motionProgress ?? 0),
+        motionProgress: preserveOnSuccess
+          ? (prevAnim?.motionProgress ?? 1)
+          : 0,
       };
     } else {
       // Advance timers
@@ -211,11 +217,15 @@ export function computeExecutionPartState(
   switch (status) {
     case "pending":
       if (isNextStep) {
-        // Next step's parts: show at approach position as a preview
-        return { position: approach, opacity: 0.25, visualState: "complete" };
+        // Pulsing preview at approach position
+        return {
+          position: approach,
+          opacity: 0.4 + 0.1 * Math.sin(clock * 3),
+          visualState: "active",
+        };
       }
-      // Future parts: stay at assembled position, slightly transparent
-      return { position: base, opacity: 0.5, visualState: "complete" };
+      // Future parts: nearly opaque at final position
+      return { position: base, opacity: 0.85, visualState: "complete" };
 
     case "running":
     case "retrying": {
@@ -238,9 +248,25 @@ export function computeExecutionPartState(
       const flashT = stepAnim?.statusTime ?? 1;
       const flashing = flashT < EXEC_TIMING.SUCCESS_FLASH_DURATION;
 
-      // Press-fit bounce effect
-      let pos = base;
-      if (step?.primitiveType === "press_fit" && flashT < EXEC_TIMING.PRESS_FIT_BOUNCE_DURATION) {
+      // Ease the final motion to assembled position (no snap)
+      const mp = stepAnim?.motionProgress ?? 1;
+      let settledMp = 1;
+      if (mp < 1 && flashT < EXEC_TIMING.SUCCESS_SETTLE_DURATION) {
+        settledMp = mp + (1 - mp) * easeInOut(flashT / EXEC_TIMING.SUCCESS_SETTLE_DURATION);
+      }
+      const st = easeInOut(settledMp);
+      let pos: Vec3 = [
+        approach[0] + (base[0] - approach[0]) * st,
+        approach[1] + (base[1] - approach[1]) * st,
+        approach[2] + (base[2] - approach[2]) * st,
+      ];
+
+      // Press-fit bounce effect (only after settling)
+      if (
+        settledMp >= 1 &&
+        step?.primitiveType === "press_fit" &&
+        flashT < EXEC_TIMING.PRESS_FIT_BOUNCE_DURATION
+      ) {
         const bounceT = flashT / EXEC_TIMING.PRESS_FIT_BOUNCE_DURATION;
         const bounce = Math.sin(bounceT * Math.PI) * EXEC_TIMING.PRESS_FIT_BOUNCE_AMPLITUDE;
         const dir = vec3(step.primitiveParams?.direction as number[] | undefined);

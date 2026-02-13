@@ -18,20 +18,20 @@ export function GroundPlane({
       <Grid
         args={[2, 2]}
         cellSize={cellSize}
-        cellColor="#E8E7E4"
+        cellColor="#EDECE9"
         sectionSize={sectionSize}
-        sectionColor="#D4D3CF"
-        fadeDistance={sectionSize * 10}
-        fadeStrength={1}
+        sectionColor="#DEDDD9"
+        fadeDistance={sectionSize * 8}
+        fadeStrength={1.2}
         infiniteGrid
         position={[0, groundY, 0]}
       />
       <ContactShadows
         position={[0, groundY + 0.001, 0]}
-        opacity={0.25}
-        scale={sectionSize * 5}
-        blur={2}
-        far={sectionSize * 1.5}
+        opacity={0.35}
+        scale={sectionSize * 6}
+        blur={2.5}
+        far={sectionSize * 2}
       />
     </group>
   );

@@ -21,6 +21,7 @@ import { AnimationTimeline } from "./AnimationTimeline";
 import { RobotArm } from "./RobotArm";
 import { ExecutionCameraController } from "./ExecutionCameraController";
 import { SuccessParticles } from "./SuccessParticles";
+import { ExecutionProgressHUD } from "./ExecutionProgressHUD";
 
 // ---------------------------------------------------------------------------
 // Camera helper — updates camera + controls when assembly changes
@@ -212,6 +213,18 @@ export function AssemblyViewer() {
     }
   }, [executionActive, anim]);
 
+  // Keyboard shortcut: 'R' resets camera to default position
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "r" || e.key === "R") {
+        if ((e.target as HTMLElement).tagName === "INPUT") return;
+        controlsRef.current?.reset();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   const handlePartClick = useCallback(
     (partId: string) => {
       if (!assembly) return;
@@ -225,12 +238,21 @@ export function AssemblyViewer() {
     <div className="relative h-full w-full">
       <Canvas
         camera={{ position: layout.cameraPos, fov: 45, near: layout.near, far: layout.far }}
-        style={{ background: "#F5F5F3" }}
+        style={{ background: "linear-gradient(180deg, #F5F5F3 0%, #EAEAE8 100%)" }}
+        shadows
       >
         <CameraSetup layout={layout} controlsRef={controlsRef} />
 
-        <ambientLight intensity={0.5} />
-        <directionalLight position={[5, 8, 3]} intensity={0.8} />
+        <ambientLight intensity={0.4} />
+        <directionalLight
+          position={[5, 8, 3]}
+          intensity={0.7}
+          castShadow
+          shadow-mapSize={[1024, 1024]}
+          shadow-bias={-0.0005}
+        />
+        <directionalLight position={[-3, 4, -2]} intensity={0.3} />
+        <directionalLight position={[0, -2, 5]} intensity={0.15} />
         <Environment preset="studio" environmentIntensity={0.3} />
         <GroundPlane
           groundY={layout.groundY}
@@ -287,6 +309,7 @@ export function AssemblyViewer() {
           executionActive={executionActive}
           executionAnimRef={executionAnimRef}
           assemblyCenter={centroid}
+          assemblyRadius={assemblyRadius}
         />
 
         <SuccessParticles
@@ -300,26 +323,32 @@ export function AssemblyViewer() {
           dampingFactor={0.1}
           minDistance={layout.near * 10}
           maxDistance={layout.maxDist}
+          enablePan={true}
+          panSpeed={1.5}
+          rotateSpeed={0.8}
+          zoomSpeed={1.2}
+          minPolarAngle={0.1}
+          maxPolarAngle={Math.PI - 0.1}
           makeDefault
         />
       </Canvas>
 
-      {!executionActive && (
-        <ViewerControls
-          exploded={exploded}
-          onToggleExplode={() => setExploded((e) => !e)}
-          wireframe={wireframe}
-          onToggleWireframe={() => setWireframe((w) => !w)}
-          animating={anim.isAnimating}
-          paused={anim.isPaused}
-          onToggleAnimation={anim.toggleAnimation}
-          onStepForward={anim.stepForward}
-          onStepBackward={anim.stepBackward}
-          onResetView={() => controlsRef.current?.reset()}
-          onReplayDemo={anim.replayDemo}
-          demoPlayed={anim.demoPlayed}
-        />
-      )}
+      {executionActive && <ExecutionProgressHUD />}
+
+      <ViewerControls
+        exploded={exploded}
+        onToggleExplode={() => setExploded((e) => !e)}
+        wireframe={wireframe}
+        onToggleWireframe={() => setWireframe((w) => !w)}
+        animating={anim.isAnimating}
+        paused={anim.isPaused}
+        onToggleAnimation={anim.toggleAnimation}
+        onStepForward={anim.stepForward}
+        onStepBackward={anim.stepBackward}
+        onResetView={() => controlsRef.current?.reset()}
+        onReplayDemo={anim.replayDemo}
+        demoPlayed={anim.demoPlayed}
+      />
 
       {!executionActive && (anim.isAnimating || anim.demoPlayed) && (
         <AnimationTimeline

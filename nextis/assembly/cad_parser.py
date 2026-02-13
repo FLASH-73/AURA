@@ -227,6 +227,9 @@ class CADParser:
             part = self._process_part(rp, i, assembly_id, output_dir)
             parts[part.id] = part
 
+        # Normalize to metres if coordinates appear to be in mm
+        self._normalize_to_metres(parts)
+
         # Detect contacts
         contacts = self._detect_contacts(raw_parts)
 
@@ -360,6 +363,28 @@ class CADParser:
         except Exception as exc:
             logger.warning("Flat extraction error: %s", exc)
             return []
+
+    # ------------------------------------------------------------------
+    # Unit normalisation
+    # ------------------------------------------------------------------
+    def _normalize_to_metres(self, parts: dict[str, Part]) -> None:
+        """Detect if positions are in mm and convert to metres."""
+        if not parts:
+            return
+        all_positions = [p.position for p in parts.values() if p.position]
+        if not all_positions:
+            return
+        max_coord = max(abs(v) for pos in all_positions for v in pos)
+        if max_coord > 1.0:  # Likely millimetres
+            scale = 0.001
+            logger.info(
+                "Detected mm coordinates (max=%.1f), scaling to metres", max_coord
+            )
+            for part in parts.values():
+                if part.position:
+                    part.position = [v * scale for v in part.position]
+                if part.dimensions:
+                    part.dimensions = [v * scale for v in part.dimensions]
 
     # ------------------------------------------------------------------
     # Part processing

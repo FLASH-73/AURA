@@ -1,13 +1,12 @@
 "use client";
 
-// Simple 6-DOF stick-figure robot arm. Renders as cylinders + spheres.
+// Simple 6-DOF stick-figure robot arm with animated gripper.
 // Uses a lightweight "reach toward target" approach — not full IK,
 // just enough to look like an arm moving to assembly positions.
 
 import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
-import * as THREE from "three";
-import type { Group } from "three";
+import type { Group, Mesh } from "three";
 import type { Vec3 } from "@/lib/animation";
 import type { ExecutionAnimState } from "@/lib/executionAnimation";
 
@@ -18,15 +17,74 @@ interface RobotArmProps {
   assemblyRadius: number;
 }
 
-const ARM_COLOR = "#9C9C97";
-const JOINT_COLOR = "#7A7974";
-const GRIPPER_COLOR = "#6B6B66";
+const ARM_COLOR = "#C0C0C0";
+const JOINT_COLOR = "#A8A8A4";
+const GRIPPER_COLOR = "#8C8C88";
 
 // Segment length ratios (fraction of assemblyRadius)
 const SEGMENTS = [0.20, 0.18, 0.14, 0.10, 0.08, 0.06];
-const JOINT_RADIUS_RATIO = 0.006;
+const JOINT_RADIUS_RATIO = 0.009;
 const LINK_RADIUS_RATIO = 0.003;
 const BASE_RADIUS_RATIO = 0.025;
+
+// ---------------------------------------------------------------------------
+// Animated gripper sub-component (needs its own useFrame for hook rules)
+// ---------------------------------------------------------------------------
+
+function GripperEndEffector({
+  lr,
+  lastLen,
+  executionAnimRef,
+}: {
+  lr: number;
+  lastLen: number;
+  executionAnimRef: React.RefObject<ExecutionAnimState>;
+}) {
+  const leftRef = useRef<Mesh>(null);
+  const rightRef = useRef<Mesh>(null);
+  const gapRef = useRef(1.0);
+
+  const gripperThickness = lr * 1.2;
+  const gripperHeight = lastLen * 0.5;
+  const gripperDepth = lr * 3;
+
+  useFrame((_, delta) => {
+    const phase = executionAnimRef.current?.endEffectorPhase ?? "idle";
+    const target = phase === "grasp" ? 0.15 : 1.0;
+    gapRef.current += (target - gapRef.current) * Math.min(1, delta * 6);
+    const offset = lr * 2 * gapRef.current + lr * 0.5;
+    if (leftRef.current) leftRef.current.position.x = offset;
+    if (rightRef.current) rightRef.current.position.x = -offset;
+  });
+
+  return (
+    <group>
+      <mesh ref={leftRef} position={[lr * 2.5, 0, 0]}>
+        <boxGeometry args={[gripperThickness, gripperHeight, gripperDepth]} />
+        <meshStandardMaterial
+          color={GRIPPER_COLOR} roughness={0.3} metalness={0.5} transparent opacity={0.6}
+        />
+      </mesh>
+      <mesh ref={rightRef} position={[-lr * 2.5, 0, 0]}>
+        <boxGeometry args={[gripperThickness, gripperHeight, gripperDepth]} />
+        <meshStandardMaterial
+          color={GRIPPER_COLOR} roughness={0.3} metalness={0.5} transparent opacity={0.6}
+        />
+      </mesh>
+      {/* Gripper crossbar */}
+      <mesh position={[0, gripperHeight * 0.3, 0]}>
+        <boxGeometry args={[lr * 5, lr * 0.8, gripperDepth * 0.8]} />
+        <meshStandardMaterial
+          color={ARM_COLOR} roughness={0.3} metalness={0.5} transparent opacity={0.6}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// RobotArm
+// ---------------------------------------------------------------------------
 
 export function RobotArm({ basePosition, executionAnimRef, visible, assemblyRadius }: RobotArmProps) {
   const groupRef = useRef<Group>(null);
@@ -101,34 +159,36 @@ export function RobotArm({ basePosition, executionAnimRef, visible, assemblyRadi
   // then the next group is positioned at the end of the link.
   function buildChain(depth: number): React.ReactNode {
     if (depth >= SEGMENTS.length) {
-      // Gripper at the end
       const lastLen = segmentLengths[SEGMENTS.length - 1] ?? lr;
       return (
-        <group>
-          <mesh position={[lr * 2, 0, 0]}>
-            <boxGeometry args={[lr, lastLen * 0.4, lr * 2]} />
-            <meshStandardMaterial color={GRIPPER_COLOR} roughness={0.4} metalness={0.3} transparent opacity={0.6} />
-          </mesh>
-          <mesh position={[-lr * 2, 0, 0]}>
-            <boxGeometry args={[lr, lastLen * 0.4, lr * 2]} />
-            <meshStandardMaterial color={GRIPPER_COLOR} roughness={0.4} metalness={0.3} transparent opacity={0.6} />
-          </mesh>
-        </group>
+        <GripperEndEffector
+          lr={lr}
+          lastLen={lastLen}
+          executionAnimRef={executionAnimRef}
+        />
       );
     }
 
     const len = segmentLengths[depth] ?? 0.01;
+    // Taper: wider at base (depth 0), narrower toward tip
+    const topRadius = lr * Math.max(0.5, 1 - depth * 0.1);
+    const bottomRadius = lr * Math.max(0.5, 1 - Math.max(0, depth - 1) * 0.1);
+
     return (
       <group ref={(el) => { jointGroupRefs.current[depth] = el; }}>
         {/* Joint sphere */}
         <mesh>
-          <sphereGeometry args={[jr, 10, 10]} />
-          <meshStandardMaterial color={JOINT_COLOR} roughness={0.4} metalness={0.3} transparent opacity={0.5} />
+          <sphereGeometry args={[jr, 16, 16]} />
+          <meshStandardMaterial
+            color={JOINT_COLOR} roughness={0.3} metalness={0.5} transparent opacity={0.6}
+          />
         </mesh>
-        {/* Link cylinder (along local Y axis) */}
+        {/* Link cylinder (along local Y axis), tapered */}
         <mesh position={[0, len / 2, 0]}>
-          <cylinderGeometry args={[lr, lr, len, 8]} />
-          <meshStandardMaterial color={ARM_COLOR} roughness={0.5} metalness={0.2} transparent opacity={0.4} />
+          <cylinderGeometry args={[topRadius, bottomRadius, len, 12]} />
+          <meshStandardMaterial
+            color={ARM_COLOR} roughness={0.3} metalness={0.5} transparent opacity={0.6}
+          />
         </mesh>
         {/* Next joint at end of this link */}
         <group position={[0, len, 0]}>
@@ -143,7 +203,9 @@ export function RobotArm({ basePosition, executionAnimRef, visible, assemblyRadi
       {/* Base plate */}
       <mesh>
         <cylinderGeometry args={[br, br * 1.2, br * 0.3, 16]} />
-        <meshStandardMaterial color={ARM_COLOR} roughness={0.4} metalness={0.3} transparent opacity={0.5} />
+        <meshStandardMaterial
+          color={ARM_COLOR} roughness={0.3} metalness={0.5} transparent opacity={0.6}
+        />
       </mesh>
       {/* Arm chain starting from base */}
       <group position={[0, br * 0.15, 0]}>

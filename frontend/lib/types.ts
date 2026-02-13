@@ -144,3 +144,34 @@ export interface PlanAnalysis {
   estimatedTeachingMinutes: number;
   summary: string;
 }
+
+// Hardware types
+export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
+
+export interface ArmStatus {
+  id: string;
+  name: string;
+  role: "leader" | "follower";
+  motorType: string;
+  port: string;
+  enabled: boolean;
+  structuralDesign: string | null;
+  calibrated: boolean;
+  status: ConnectionStatus;
+}
+
+export interface PairingInfo {
+  leaderId: string;
+  followerId: string;
+  name: string;
+}
+
+export interface HardwareStatus {
+  arms: ArmStatus[];
+  pairings: PairingInfo[];
+  totalArms: number;
+  connected: number;
+  disconnected: number;
+  leaders: number;
+  followers: number;
+}

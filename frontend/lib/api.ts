@@ -3,6 +3,7 @@ import type {
   AssemblySummary,
   Demo,
   ExecutionState,
+  HardwareStatus,
   PlanAnalysis,
   StepMetrics,
   SystemInfo,
@@ -116,6 +117,24 @@ export const api = {
       () => get<TeleopState>("/teleop/state"),
       { active: false, arms: [] },
     ),
+
+  // --- Hardware ---
+  getHardwareStatus: () =>
+    withMockFallback(
+      () => get<HardwareStatus>("/hardware/status"),
+      {
+        arms: [], pairings: [], totalArms: 0,
+        connected: 0, disconnected: 0, leaders: 0, followers: 0,
+      },
+    ),
+  fetchHardwareStatus: () => get<HardwareStatus>("/hardware/status"),
+  connectArm: (armId: string) => post("/hardware/connect", { armId }),
+  disconnectArm: (armId: string) => post("/hardware/disconnect", { armId }),
+
+  // --- Homing ---
+  startHoming: (armId: string, homePos?: Record<string, number>) =>
+    post("/homing/start", { armId, homePos }),
+  stopHoming: () => post("/homing/stop"),
 
   // --- Recording ---
   startRecording: (stepId: string) => post(`/recording/step/${stepId}/start`),

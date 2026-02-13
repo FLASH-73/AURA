@@ -168,22 +168,22 @@ export function PartMesh({
       {hasGlb ? (
         <Suspense
           fallback={
-            <mesh castShadow>
+            <mesh castShadow receiveShadow>
               <PlaceholderGeometry geometry={part.geometry ?? "box"} dimensions={dims} />
-              <meshStandardMaterial color={part.color ?? "#B0AEA8"} roughness={0.6} metalness={0.1} />
+              <meshStandardMaterial color={part.color ?? "#B0AEA8"} roughness={0.45} metalness={0.25} />
             </mesh>
           }
         >
           <GlbMesh url={part.meshFile!} />
         </Suspense>
       ) : (
-        <mesh castShadow>
+        <mesh castShadow receiveShadow>
           <PlaceholderGeometry geometry={part.geometry ?? "box"} dimensions={dims} />
           <meshStandardMaterial
             ref={matRef}
             color={part.color ?? "#B0AEA8"}
-            roughness={0.6}
-            metalness={0.1}
+            roughness={0.45}
+            metalness={0.25}
             transparent
             opacity={1}
           />

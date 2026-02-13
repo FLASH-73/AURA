@@ -3,7 +3,7 @@
 import useSWR from "swr";
 import { useAssembly } from "@/context/AssemblyContext";
 import { useExecution } from "@/context/ExecutionContext";
-import type { TeleopState } from "@/lib/types";
+import type { HardwareStatus, TeleopState } from "@/lib/types";
 import { api } from "@/lib/api";
 
 function formatTime(ms: number): string {
@@ -11,6 +11,35 @@ function formatTime(ms: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function HardwareIndicator() {
+  const { data: hw } = useSWR<HardwareStatus>(
+    "/hardware/status",
+    api.getHardwareStatus,
+    { refreshInterval: 5000 },
+  );
+
+  if (!hw || hw.totalArms === 0) return null;
+
+  const dotColor =
+    hw.connected === hw.totalArms
+      ? "bg-status-success"
+      : hw.connected > 0
+        ? "bg-amber-400"
+        : "bg-text-tertiary";
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className={`h-2 w-2 rounded-full ${dotColor}`} />
+      <span className="text-[11px] font-medium uppercase tracking-[0.02em] text-text-tertiary">
+        Arms
+      </span>
+      <span className="font-mono text-[13px] font-medium tabular-nums text-text-primary">
+        {hw.connected}/{hw.totalArms}
+      </span>
+    </div>
+  );
 }
 
 function TeleopIndicator() {
@@ -53,6 +82,7 @@ export function BottomBar() {
 
   return (
     <footer className="flex h-10 shrink-0 items-center justify-center gap-8 border-t border-bg-tertiary px-6">
+      <HardwareIndicator />
       <TeleopIndicator />
       {items.map((item) => (
         <div key={item.label} className="flex items-center gap-2">
