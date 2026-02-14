@@ -65,6 +65,8 @@ export function ExecutionProvider({ children }: { children: ReactNode }) {
   const [wsActive, setWsActive] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const stepIndexRef = useRef(0);
+  // Guard: only accept non-idle WS execution state if user started execution THIS session
+  const userStartedRef = useRef(false);
 
   const clearTimer = useCallback(() => {
     if (timerRef.current) {
@@ -81,12 +83,25 @@ export function ExecutionProvider({ children }: { children: ReactNode }) {
     const msg = lastMessage as Record<string, unknown>;
     if (msg.type !== "execution_state") return;
 
+    const incomingPhase = (msg.phase as ExecutionPhase) ?? "idle";
+
+    // Reject non-idle/non-complete state if user hasn't started execution this session.
+    // Prevents stale backend state (from a previous run) from hijacking the viewer.
+    if (
+      !userStartedRef.current &&
+      incomingPhase !== "idle" &&
+      incomingPhase !== "complete"
+    ) {
+      setState((prev) => (prev.phase === "idle" ? prev : { ...prev, phase: "idle" }));
+      return;
+    }
+
     // WS is delivering real state — disable mock timer
     setWsActive(true);
     clearTimer();
 
     setState({
-      phase: (msg.phase as ExecutionPhase) ?? "idle",
+      phase: incomingPhase,
       assemblyId: (msg.assemblyId as string) ?? null,
       currentStepId: (msg.currentStepId as string) ?? null,
       stepStates: (msg.stepStates as Record<string, StepRuntimeState>) ?? {},
@@ -186,6 +201,7 @@ export function ExecutionProvider({ children }: { children: ReactNode }) {
   // ---------------------------------------------------------------
   const startExecution = useCallback(() => {
     if (!assembly || assembly.stepOrder.length === 0) return;
+    userStartedRef.current = true;
     clearTimer();
     stepIndexRef.current = 0;
 
@@ -241,6 +257,7 @@ export function ExecutionProvider({ children }: { children: ReactNode }) {
     api.stopExecution().catch(console.warn);
     clearTimer();
     stepIndexRef.current = 0;
+    userStartedRef.current = false;
     if (!wsActive) {
       setState((prev) => ({
         ...prev,
@@ -259,6 +276,7 @@ export function ExecutionProvider({ children }: { children: ReactNode }) {
     api.stopTeleop().catch(console.warn);
     clearTimer();
     stepIndexRef.current = 0;
+    userStartedRef.current = false;
     setState((prev) => ({
       ...prev,
       phase: "idle",
@@ -290,7 +308,10 @@ export function ExecutionProvider({ children }: { children: ReactNode }) {
   }, [state.phase, wsActive]);
 
   // Cleanup on unmount
-  useEffect(() => () => clearTimer(), [clearTimer]);
+  useEffect(() => () => {
+    clearTimer();
+    userStartedRef.current = false;
+  }, [clearTimer]);
 
   const value = useMemo<ExecutionContextValue>(
     () => ({

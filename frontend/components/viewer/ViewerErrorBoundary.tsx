@@ -1,6 +1,6 @@
 "use client";
 
-import { Component, type ReactNode } from "react";
+import { Component, Fragment, type ReactNode } from "react";
 
 interface Props {
   children: ReactNode;
@@ -40,6 +40,6 @@ export class ViewerErrorBoundary extends Component<Props, State> {
         </div>
       );
     }
-    return <div key={this.state.retryKey} className="contents">{this.props.children}</div>;
+    return <Fragment key={this.state.retryKey}>{this.props.children}</Fragment>;
   }
 }

@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useRef } from "react";
+import { Suspense, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Clone, Edges, useGLTF } from "@react-three/drei";
+import { Edges, useGLTF } from "@react-three/drei";
 import type { Group, MeshStandardMaterial } from "three";
 import { Mesh } from "three";
 import type { Part } from "@/lib/types";
@@ -23,11 +23,23 @@ function GlbMesh({ url }: { url: string }) {
   const fullUrl = url.startsWith("http") ? url : `${API_BASE}${url}`;
   const { scene } = useGLTF(fullUrl);
 
-  // <Clone> deep-clones geometry + materials (via SkeletonUtils.clone),
-  // preventing React reconciliation from disposing shared WebGL buffers
-  // in the useGLTF cache — which caused permanent model disappearance.
+  // Deep clone with independent geometry + material per mesh, so React
+  // reconciliation cannot dispose shared WebGL buffers from the useGLTF cache.
   // Scale 0.001: OCC tessellation outputs mm, Three.js scene uses metres.
-  return <Clone object={scene} scale={0.001} castShadow receiveShadow />;
+  const cloned = useMemo(() => {
+    const root = scene.clone(true);
+    root.traverse((child) => {
+      child.frustumCulled = false;
+      if ((child as Mesh).isMesh) {
+        const m = child as Mesh;
+        m.geometry = m.geometry.clone();
+        m.material = (m.material as MeshStandardMaterial).clone();
+      }
+    });
+    return root;
+  }, [scene]);
+
+  return <primitive object={cloned} scale={0.001} castShadow receiveShadow />;
 }
 
 // ---------------------------------------------------------------------------
@@ -158,6 +170,7 @@ export function PartMesh({
   return (
     <group
       ref={groupRef}
+      frustumCulled={false}
       onClick={(e) => {
         e.stopPropagation();
         onClick();

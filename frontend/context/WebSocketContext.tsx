@@ -32,16 +32,26 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     wsRef.current = ws;
 
     const unsubscribe = ws.onMessage((data) => {
+      // Update connection state only when changed (callback form skips re-render on same value)
+      setConnected((prev) => (prev === ws.connected ? prev : ws.connected));
+      setConnectionState((prev) => (prev === ws.state ? prev : ws.state));
+
+      // Skip heartbeats — they carry no actionable payload for consumers
+      if (
+        typeof data === "object" &&
+        data !== null &&
+        (data as Record<string, unknown>).type === "heartbeat"
+      ) {
+        return;
+      }
       setLastMessage(data);
-      setConnected(ws.connected);
-      setConnectionState(ws.state);
     });
 
     ws.connect();
     // Poll connection state for reconnection transitions
     const pollId = setInterval(() => {
-      setConnected(ws.connected);
-      setConnectionState(ws.state);
+      setConnected((prev) => (prev === ws.connected ? prev : ws.connected));
+      setConnectionState((prev) => (prev === ws.state ? prev : ws.state));
     }, 1000);
 
     return () => {
