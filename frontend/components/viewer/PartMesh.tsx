@@ -23,9 +23,9 @@ function GlbMesh({ url }: { url: string }) {
   const fullUrl = url.startsWith("http") ? url : `${API_BASE}${url}`;
   const { scene } = useGLTF(fullUrl);
 
-  // Clone scene with independent materials, then recenter at local origin.
-  // OCC tessellation may bake assembly-level transforms into GLB vertices;
-  // Part.position (applied by the parent group) handles placement exclusively.
+  // Clone scene with independent materials, scale mm→m, then recenter.
+  // OCC tessellation outputs vertices in millimeters; the Three.js scene uses
+  // meters (matching assembly JSON positions). Scale by 0.001 to reconcile.
   const cloned = useMemo(() => {
     const c = scene.clone();
     c.traverse((child) => {
@@ -34,6 +34,9 @@ function GlbMesh({ url }: { url: string }) {
         m.material = (m.material as Material).clone();
       }
     });
+
+    // OCC tessellation produces mm-scale vertices; Three.js scene uses meters
+    c.scale.setScalar(0.001);
 
     const box = new Box3().setFromObject(c);
     const center = box.getCenter(new Vector3());

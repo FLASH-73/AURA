@@ -84,7 +84,7 @@ export default function DashboardPage() {
 
       <main className="flex min-h-0 flex-1">
         {/* Left: 3D Viewer (70%) */}
-        <div className="relative w-[70%]">
+        <div className="relative h-full w-[70%]">
           <AssemblyViewer />
           <CameraPiP />
         </div>

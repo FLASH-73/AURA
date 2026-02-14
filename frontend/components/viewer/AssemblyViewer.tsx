@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls, Environment } from "@react-three/drei";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
+import { MOUSE, TOUCH } from "three";
 import type { PerspectiveCamera } from "three";
 import { useAssembly } from "@/context/AssemblyContext";
 import { useExecution } from "@/context/ExecutionContext";
@@ -116,11 +117,11 @@ function computeLayout(parts: { position?: number[]; dimensions?: number[] }[]):
   if (radius < 0.001) return DEFAULTS;
 
   return {
-    cameraPos: [cx + radius, cy + radius * 0.8, cz + radius],
+    cameraPos: [cx + radius * 1.5, cy + radius * 1.2, cz + radius * 1.5],
     target: [cx, cy, cz],
     near: radius * 0.001,
     far: radius * 40,
-    maxDist: radius * 10,
+    maxDist: radius * 15,
     groundY: minY - radius * 0.02,
     gridCell: radius * 0.04,
     gridSection: radius * 0.2,
@@ -205,8 +206,30 @@ export function AssemblyViewer() {
     [assembly, selectStep],
   );
 
+  // Fit-to-view: recompute camera from current layout
+  const handleFitToView = useCallback(() => {
+    if (!controlsRef.current) return;
+    const cam = controlsRef.current.object as PerspectiveCamera;
+    cam.position.set(...layout.cameraPos);
+    cam.near = layout.near;
+    cam.far = layout.far;
+    cam.updateProjectionMatrix();
+    controlsRef.current.target.set(...layout.target);
+    controlsRef.current.maxDistance = layout.maxDist * 2;
+    controlsRef.current.update();
+  }, [layout]);
+
+  // Camera help toast — auto-dismiss after 4 seconds, re-show on assembly change
+  const [showHelp, setShowHelp] = useState(false);
+  useEffect(() => {
+    if (!assembly) return;
+    setShowHelp(true);
+    const timer = setTimeout(() => setShowHelp(false), 4000);
+    return () => clearTimeout(timer);
+  }, [assembly?.id]);
+
   return (
-    <div className="relative h-full w-full" style={{ boxShadow: "inset 0 1px 0 0 rgba(0,0,0,0.04)" }}>
+    <div className="relative h-full w-full" style={{ touchAction: "none", overscrollBehavior: "none", boxShadow: "inset 0 1px 0 0 rgba(0,0,0,0.04)" }}>
       <Canvas
         camera={{ position: layout.cameraPos, fov: 45, near: layout.near, far: layout.far }}
         style={{ background: "radial-gradient(ellipse at 45% 40%, #FEFDFB 0%, #F9F7F3 80%)" }}
@@ -286,15 +309,18 @@ export function AssemblyViewer() {
         <OrbitControls
           ref={controlsRef}
           enableDamping
-          dampingFactor={0.1}
-          minDistance={layout.near * 10}
-          maxDistance={layout.maxDist}
+          dampingFactor={0.12}
+          minDistance={layout.near * 5}
+          maxDistance={layout.maxDist * 2}
           enablePan={true}
+          screenSpacePanning
           panSpeed={1.5}
           rotateSpeed={0.8}
           zoomSpeed={1.2}
-          minPolarAngle={0.1}
-          maxPolarAngle={Math.PI - 0.1}
+          minPolarAngle={0}
+          maxPolarAngle={Math.PI}
+          mouseButtons={{ LEFT: MOUSE.ROTATE, MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.PAN }}
+          touches={{ ONE: TOUCH.ROTATE, TWO: TOUCH.DOLLY_PAN }}
           makeDefault
         />
       </Canvas>
@@ -312,9 +338,19 @@ export function AssemblyViewer() {
         onStepForward={anim.stepForward}
         onStepBackward={anim.stepBackward}
         onResetView={() => controlsRef.current?.reset()}
+        onFitToView={handleFitToView}
         onReplayDemo={anim.replayDemo}
         demoPlayed={anim.demoPlayed}
       />
+
+      {showHelp && (
+        <div className="pointer-events-none absolute bottom-14 left-1/2 -translate-x-1/2 rounded-md bg-text-primary/80 px-3 py-1.5 text-[11px] text-bg-primary backdrop-blur-sm">
+          <span className="font-medium">Drag</span> orbit &middot;{" "}
+          <span className="font-medium">Right-drag</span> pan &middot;{" "}
+          <span className="font-medium">Scroll</span> zoom &middot;{" "}
+          <span className="font-medium">R</span> reset
+        </div>
+      )}
 
       {!executionActive && (anim.isAnimating || anim.demoPlayed) && (
         <AnimationTimeline

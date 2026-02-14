@@ -11,6 +11,7 @@ interface ViewerControlsProps {
   onStepForward: () => void;
   onStepBackward: () => void;
   onResetView: () => void;
+  onFitToView: () => void;
   onReplayDemo: () => void;
   demoPlayed: boolean;
 }
@@ -50,6 +51,7 @@ export function ViewerControls({
   onStepForward,
   onStepBackward,
   onResetView,
+  onFitToView,
   onReplayDemo,
   demoPlayed,
 }: ViewerControlsProps) {
@@ -57,10 +59,17 @@ export function ViewerControls({
 
   return (
     <div className="absolute right-3 top-3 flex flex-col gap-1 rounded-md bg-white/70 p-1 backdrop-blur-sm">
-      <IconButton title="Reset view" onClick={onResetView}>
+      <IconButton title="Reset view (R)" onClick={onResetView}>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
           <path d="M2 8a6 6 0 0 1 10.5-4M14 8a6 6 0 0 1-10.5 4" />
           <path d="M12.5 2v2.5H10M3.5 14v-2.5H6" />
+        </svg>
+      </IconButton>
+
+      <IconButton title="Fit to view" onClick={onFitToView}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+          <rect x="4" y="4" width="8" height="8" rx="0.5" />
+          <path d="M2 5V2h3M14 5V2h-3M2 11v3h3M14 11v3h-3" />
         </svg>
       </IconButton>
 
