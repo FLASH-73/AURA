@@ -18,14 +18,14 @@ export function ExecutionProgressHUD() {
     (s) => s.status === "success",
   ).length;
 
-  // Current step number (1-indexed)
+  // Current step number (1-indexed, clamped — WS state may lag behind assembly)
   const currentStepIdx = executionState.currentStepId
     ? stepOrder.indexOf(executionState.currentStepId)
     : -1;
-  const currentStepNum = Math.max(completedCount + 1, currentStepIdx + 1);
+  const currentStepNum = Math.min(Math.max(1, completedCount + 1, currentStepIdx + 1), totalSteps || 1);
 
   const progressPercent =
-    totalSteps > 0 ? Math.round((completedCount / totalSteps) * 100) : 0;
+    totalSteps > 0 ? Math.min(100, Math.max(0, Math.round((completedCount / totalSteps) * 100))) : 0;
 
   // Track start time
   useEffect(() => {
@@ -55,8 +55,8 @@ export function ExecutionProgressHUD() {
     return () => clearInterval(tick);
   }, [executionState.phase]);
 
-  // Progress bar (12 chars wide)
-  const filledBlocks = Math.round((progressPercent / 100) * 12);
+  // Progress bar (12 chars wide, clamped to avoid RangeError)
+  const filledBlocks = Math.min(12, Math.max(0, Math.round((progressPercent / 100) * 12)));
   const bar = "\u2588".repeat(filledBlocks) + "\u2591".repeat(12 - filledBlocks);
 
   return (

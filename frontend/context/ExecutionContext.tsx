@@ -15,7 +15,6 @@ import type {
   ExecutionState,
   StepRuntimeState,
 } from "@/lib/types";
-import { MOCK_EXECUTION_STATE } from "@/lib/mock-data";
 import { api } from "@/lib/api";
 import { useAssembly } from "./AssemblyContext";
 import { useWebSocket } from "./WebSocketContext";
@@ -53,7 +52,16 @@ function makeIdleStepStates(
 export function ExecutionProvider({ children }: { children: ReactNode }) {
   const { assembly } = useAssembly();
   const { lastMessage } = useWebSocket();
-  const [state, setState] = useState<ExecutionState>(MOCK_EXECUTION_STATE);
+  const [state, setState] = useState<ExecutionState>({
+    phase: "idle",
+    assemblyId: null,
+    currentStepId: null,
+    stepStates: {},
+    runNumber: 0,
+    startTime: null,
+    elapsedMs: 0,
+    overallSuccessRate: 0,
+  });
   const [wsActive, setWsActive] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const stepIndexRef = useRef(0);
@@ -88,6 +96,30 @@ export function ExecutionProvider({ children }: { children: ReactNode }) {
       overallSuccessRate: (msg.overallSuccessRate as number) ?? 0,
     });
   }, [lastMessage, clearTimer]);
+
+  // ---------------------------------------------------------------
+  // Reset local execution state when user switches to a different assembly
+  // ---------------------------------------------------------------
+  useEffect(() => {
+    if (!assembly) return;
+    if (
+      state.assemblyId &&
+      state.assemblyId !== assembly.id &&
+      state.phase !== "idle" &&
+      state.phase !== "complete"
+    ) {
+      clearTimer();
+      stepIndexRef.current = 0;
+      setState((prev) => ({
+        ...prev,
+        phase: "idle",
+        currentStepId: null,
+        stepStates: makeIdleStepStates(assembly.stepOrder),
+        startTime: null,
+        elapsedMs: 0,
+      }));
+    }
+  }, [assembly?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------------------------------------------------------------
   // Mock execution fallback (when WebSocket is unavailable)

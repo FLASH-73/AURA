@@ -22,6 +22,7 @@ import { AnimationTimeline } from "./AnimationTimeline";
 import { RobotArm } from "./RobotArm";
 import { ExecutionCameraController } from "./ExecutionCameraController";
 import { ExecutionProgressHUD } from "./ExecutionProgressHUD";
+import { ViewerErrorBoundary } from "./ViewerErrorBoundary";
 
 // ---------------------------------------------------------------------------
 // Camera helper — updates camera + controls when assembly changes
@@ -158,7 +159,9 @@ export function AssemblyViewer() {
 
   // Execution animation state
   const executionAnimRef = useRef<ExecutionAnimState>({ ...INITIAL_EXEC_ANIM });
-  const executionActive = executionState.phase === "running" || executionState.phase === "paused";
+  const executionActive =
+    (executionState.phase === "running" || executionState.phase === "paused") &&
+    executionState.assemblyId === assembly?.id;
 
   // Robot arm base position (left of assembly, at ground level)
   const armBase = useMemo<Vec3>(
@@ -230,6 +233,7 @@ export function AssemblyViewer() {
 
   return (
     <div className="relative h-full w-full" style={{ touchAction: "none", overscrollBehavior: "none", boxShadow: "inset 0 1px 0 0 rgba(0,0,0,0.04)" }}>
+      <ViewerErrorBoundary>
       <Canvas
         camera={{ position: layout.cameraPos, fov: 45, near: layout.near, far: layout.far }}
         style={{ background: "radial-gradient(ellipse at 45% 40%, #FEFDFB 0%, #F9F7F3 80%)" }}
@@ -362,6 +366,7 @@ export function AssemblyViewer() {
           onScrubEnd={anim.scrubEnd}
         />
       )}
+      </ViewerErrorBoundary>
     </div>
   );
 }

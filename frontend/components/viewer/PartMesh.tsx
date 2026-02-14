@@ -118,8 +118,16 @@ export function PartMesh({
             else if (isGhost) mat.color.set(GHOST_COLOR);
             else if (effectiveState === "complete" && !isSelected) mat.color.set(COMPLETE_COLOR);
             if (mat.emissive) {
-              mat.emissive.set(emissive > 0 ? color : "#000000");
-              mat.emissiveIntensity = emissive;
+              if (isSelected && !isGhost) {
+                mat.emissive.set(ACCENT_COLOR);
+                mat.emissiveIntensity = 0.3;
+              } else if (emissive > 0) {
+                mat.emissive.set(color);
+                mat.emissiveIntensity = emissive;
+              } else {
+                mat.emissive.set("#000000");
+                mat.emissiveIntensity = 0;
+              }
             }
           }
         }
@@ -131,8 +139,16 @@ export function PartMesh({
       matRef.current.transparent = transparent;
       matRef.current.wireframe = wire;
       matRef.current.color.set(color);
-      matRef.current.emissive.set(emissive > 0 ? color : "#000000");
-      matRef.current.emissiveIntensity = emissive;
+      if (isSelected && !isGhost) {
+        matRef.current.emissive.set(ACCENT_COLOR);
+        matRef.current.emissiveIntensity = 0.3;
+      } else if (emissive > 0) {
+        matRef.current.emissive.set(color);
+        matRef.current.emissiveIntensity = emissive;
+      } else {
+        matRef.current.emissive.set("#000000");
+        matRef.current.emissiveIntensity = 0;
+      }
     }
   });
 

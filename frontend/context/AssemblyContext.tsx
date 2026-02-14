@@ -12,7 +12,6 @@ import {
 } from "react";
 import useSWR, { mutate as globalMutate } from "swr";
 import type { Assembly, AssemblyStep, AssemblySummary } from "@/lib/types";
-import { MOCK_ASSEMBLY, MOCK_SUMMARIES } from "@/lib/mock-data";
 import { api } from "@/lib/api";
 
 interface AssemblyContextValue {
@@ -30,37 +29,28 @@ interface AssemblyContextValue {
 const AssemblyContext = createContext<AssemblyContextValue | null>(null);
 
 export function AssemblyProvider({ children }: { children: ReactNode }) {
-  const [assemblyId, setAssemblyId] = useState<string>(
-    MOCK_SUMMARIES[0]?.id ?? "",
-  );
+  const [assemblyId, setAssemblyId] = useState<string>("");
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
 
-  const { data: assemblies = MOCK_SUMMARIES, mutate: mutateAssemblies } =
-    useSWR<AssemblySummary[]>(
-      "/assemblies",
-      api.fetchAssemblySummaries,
-      { fallbackData: MOCK_SUMMARIES },
-    );
+  const { data: assemblies = [], mutate: mutateAssemblies } =
+    useSWR<AssemblySummary[]>("/assemblies", api.fetchAssemblySummaries);
 
   const refreshAssemblies = useCallback(() => {
     void mutateAssemblies();
   }, [mutateAssemblies]);
 
-  // Auto-select gearbox if available (more impressive demo than bearing housing)
+  // Auto-select first assembly from server on initial load
   const autoSelected = useRef(false);
   useEffect(() => {
-    if (autoSelected.current) return;
-    const gearbox = assemblies.find((a) => a.id === "assem_gearbox");
-    if (gearbox) {
-      autoSelected.current = true;
-      setAssemblyId(gearbox.id);
-    }
+    const first = assemblies[0];
+    if (autoSelected.current || !first) return;
+    autoSelected.current = true;
+    setAssemblyId(first.id);
   }, [assemblies]);
 
   const { data: assembly = null, isLoading } = useSWR<Assembly>(
     assemblyId ? `/assemblies/${assemblyId}` : null,
     () => api.fetchAssembly(assemblyId),
-    { fallbackData: assemblyId === MOCK_ASSEMBLY.id ? MOCK_ASSEMBLY : undefined },
   );
 
   const selectStep = useCallback((stepId: string | null) => {
@@ -69,13 +59,16 @@ export function AssemblyProvider({ children }: { children: ReactNode }) {
 
   const selectAssembly = useCallback(
     (id: string, data?: Assembly) => {
+      if (id === assemblyId) return;
+      // Best-effort stop any running execution when switching assemblies
+      api.stopExecution().catch(() => {});
       if (data) {
         void globalMutate(`/assemblies/${id}`, data, false);
       }
       setAssemblyId(id);
       setSelectedStepId(null);
     },
-    [],
+    [assemblyId],
   );
 
   const deleteAssembly = useCallback(
@@ -84,7 +77,7 @@ export function AssemblyProvider({ children }: { children: ReactNode }) {
       const updated = await mutateAssemblies();
       if (id === assemblyId) {
         const remaining = updated?.filter((a) => a.id !== id);
-        setAssemblyId(remaining?.[0]?.id ?? MOCK_SUMMARIES[0]?.id ?? "");
+        setAssemblyId(remaining?.[0]?.id ?? "");
         setSelectedStepId(null);
       }
     },
