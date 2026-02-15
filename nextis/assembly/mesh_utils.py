@@ -288,6 +288,9 @@ def compute_resting_rotation(shape: Any) -> list[float]:
         explorer = TopExp_Explorer(shape, TopAbs_FACE)
         while explorer.More():
             face = explorer.Current()
+            # OCP requires explicit downcast; pythonocc auto-downcasts
+            if _topods_cast is not None:
+                face = _static(_topods_cast, "Face")(face)
             surf = BRepAdaptor_Surface(face, True)
 
             if surf.GetType() == GeomAbs_Plane:
