@@ -13,6 +13,7 @@ import type { Vec3 } from "@/lib/animation";
 import { useAnimationControls } from "@/lib/useAnimationControls";
 import { INITIAL_EXEC_ANIM } from "@/lib/executionAnimation";
 import type { ExecutionAnimState } from "@/lib/executionAnimation";
+import { buildVisibilityColorMap } from "@/lib/colors";
 import { GroundPlane } from "./GroundPlane";
 import { PartMesh } from "./PartMesh";
 import { ApproachVector } from "./ApproachVector";
@@ -152,6 +153,7 @@ export function AssemblyViewer() {
   const [exploded, setExploded] = useState(false);
   const [wireframe, setWireframe] = useState(false);
   const [showGround, setShowGround] = useState(true);
+  const [colorMode, setColorMode] = useState<"original" | "distinct">("original");
 
   const parts = useMemo(() => (assembly ? Object.values(assembly.parts) : []), [assembly]);
   const stepOrder = assembly?.stepOrder ?? [];
@@ -161,6 +163,10 @@ export function AssemblyViewer() {
   const anim = useAnimationControls(assembly?.id, totalSteps);
 
   const layout = useMemo(() => computeLayout(parts), [parts]);
+  const visibilityColors = useMemo(
+    () => buildVisibilityColorMap(parts.map((p) => p.id)),
+    [parts],
+  );
 
   // Geometry for execution animation
   const centroid = useMemo<Vec3>(() => computeCentroid(parts), [parts]);
@@ -319,6 +325,8 @@ export function AssemblyViewer() {
                 selectedStepId={selectedStepId}
                 firstStepIdForPart={partToStepId[part.id] ?? null}
                 wireframeOverlay={wireframe}
+                colorMode={colorMode}
+                visibilityColor={visibilityColors[part.id]}
                 onClick={() => handlePartClick(part.id)}
               />
               {selectedStepId === partToStepId[part.id] && part.graspPoints[0] && (
@@ -379,6 +387,8 @@ export function AssemblyViewer() {
         onToggleWireframe={() => setWireframe((w) => !w)}
         showGround={showGround}
         onToggleGround={() => setShowGround((g) => !g)}
+        colorMode={colorMode}
+        onToggleColorMode={() => setColorMode((m) => m === "original" ? "distinct" : "original")}
         animating={anim.isAnimating}
         paused={anim.isPaused}
         onToggleAnimation={anim.toggleAnimation}

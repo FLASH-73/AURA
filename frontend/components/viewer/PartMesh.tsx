@@ -4,7 +4,14 @@ import { Suspense, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Edges, useGLTF } from "@react-three/drei";
 import type { Group } from "three";
-import { DoubleSide, Mesh, MeshPhysicalMaterial } from "three";
+import {
+  DoubleSide,
+  EdgesGeometry,
+  LineBasicMaterial,
+  LineSegments,
+  Mesh,
+  MeshPhysicalMaterial,
+} from "three";
 import type { Part } from "@/lib/types";
 import type { PartRenderState } from "@/lib/animation";
 import { GraspPoint } from "./GraspPoint";
@@ -16,7 +23,6 @@ import { GlbErrorBoundary, PlaceholderGeometry } from "./GlbErrorBoundary";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const GHOST_COLOR = "#D4D4D0";
-const COMPLETE_COLOR = "#C8C8C4";
 const ACCENT_COLOR = "#2563EB";
 
 function GlbMesh({ url }: { url: string }) {
@@ -39,12 +45,32 @@ function GlbMesh({ url }: { url: string }) {
           map: oldMat.map,
           roughness: oldMat.roughness ?? 0.4,
           metalness: oldMat.metalness ?? 0.15,
-          clearcoat: 0.15,
-          clearcoatRoughness: 0.3,
+          clearcoat: 0.1,
+          clearcoatRoughness: 0.4,
+          envMapIntensity: 1.5,
           side: DoubleSide,
         });
-        m.userData.originalColor = oldMat.color.getHexString();
+
+        // Prevent black blobs: boost near-black colors to dark grey
+        const hsl = { h: 0, s: 0, l: 0 };
+        newMat.color.getHSL(hsl);
+        if (hsl.l < 0.08) {
+          newMat.color.setHSL(hsl.h, Math.min(hsl.s, 0.3), 0.15);
+        }
+
+        m.userData.originalColor = newMat.color.getHexString();
         m.material = newMat;
+
+        // Edge lines for CAD-quality surface definition
+        const edgesGeo = new EdgesGeometry(m.geometry, 25);
+        const edgesMat = new LineBasicMaterial({
+          color: 0x000000,
+          transparent: true,
+          opacity: 0.07,
+        });
+        const edgeLines = new LineSegments(edgesGeo, edgesMat);
+        edgeLines.userData.isEdgeHelper = true;
+        m.add(edgeLines);
       }
     });
     return root;
@@ -63,6 +89,8 @@ interface PartMeshProps {
   selectedStepId: string | null;
   firstStepIdForPart: string | null;
   wireframeOverlay: boolean;
+  colorMode: "original" | "distinct";
+  visibilityColor?: string;
   onClick: () => void;
 }
 
@@ -72,6 +100,8 @@ export function PartMesh({
   selectedStepId,
   firstStepIdForPart,
   wireframeOverlay,
+  colorMode,
+  visibilityColor,
   onClick,
 }: PartMeshProps) {
   const groupRef = useRef<Group>(null);
@@ -114,12 +144,12 @@ export function PartMesh({
     const transparent = isGhost || effectiveState === "active" || opacity < 1;
     const wire = isGhost || wireframeOverlay;
 
-    // Determine color
+    // Determine color based on mode
     let color: string;
     if (isGhost) {
       color = GHOST_COLOR;
-    } else if (effectiveState === "complete" && !isSelected) {
-      color = COMPLETE_COLOR;
+    } else if (colorMode === "distinct" && visibilityColor) {
+      color = visibilityColor;
     } else {
       color = part.color ?? "#B0AEA8";
     }
@@ -131,15 +161,29 @@ export function PartMesh({
     if (hasGlb) {
       // GLB path: traverse all meshes in the loaded scene
       groupRef.current.traverse((child) => {
+        if (child.userData?.isEdgeHelper) {
+          const lines = child as LineSegments;
+          lines.visible = !isGhost && !wire;
+          const lineMat = lines.material as LineBasicMaterial;
+          if (isSelected && !isGhost) {
+            lineMat.color.set(ACCENT_COLOR);
+            lineMat.opacity = 0.4;
+          } else {
+            lineMat.color.set(0x000000);
+            lineMat.opacity = 0.07;
+          }
+          return;
+        }
         if ((child as Mesh).isMesh) {
           const mat = (child as Mesh).material as MeshPhysicalMaterial;
           if (mat.color) {
             mat.opacity = opacity;
             mat.transparent = transparent;
             mat.wireframe = wire;
-            // Color: override > ghost > restore original GLB color
+            // Color: override > ghost > distinct mode > restore original GLB color
             if (rs.colorOverride) mat.color.set(rs.colorOverride);
             else if (isGhost) mat.color.set(GHOST_COLOR);
+            else if (colorMode === "distinct" && visibilityColor) mat.color.set(visibilityColor);
             else if ((child as Mesh).userData.originalColor) {
               mat.color.set(`#${(child as Mesh).userData.originalColor}`);
             }
@@ -200,7 +244,7 @@ export function PartMesh({
             fallback={
               <mesh castShadow receiveShadow>
                 <PlaceholderGeometry geometry={part.geometry ?? "box"} dimensions={dims} />
-                <meshPhysicalMaterial color={part.color ?? "#B0AEA8"} roughness={0.4} metalness={0.15} clearcoat={0.15} clearcoatRoughness={0.3} />
+                <meshPhysicalMaterial color={part.color ?? "#B0AEA8"} roughness={0.4} metalness={0.15} clearcoat={0.1} clearcoatRoughness={0.4} envMapIntensity={1.5} />
               </mesh>
             }
           >
@@ -215,12 +259,17 @@ export function PartMesh({
             color={part.color ?? "#B0AEA8"}
             roughness={0.4}
             metalness={0.15}
-            clearcoat={0.15}
-            clearcoatRoughness={0.3}
+            clearcoat={0.1}
+            clearcoatRoughness={0.4}
+            envMapIntensity={1.5}
             transparent
             opacity={1}
           />
-          {isSelected && <Edges color={ACCENT_COLOR} linewidth={2} />}
+          <Edges
+            color={isSelected ? ACCENT_COLOR : "#1a1a1a12"}
+            linewidth={isSelected ? 2 : 1}
+            threshold={25}
+          />
         </mesh>
       )}
 

@@ -16,6 +16,8 @@ interface ViewerControlsProps {
   onFitToView: () => void;
   onReplayDemo: () => void;
   demoPlayed: boolean;
+  colorMode: "original" | "distinct";
+  onToggleColorMode: () => void;
 }
 
 function IconButton({
@@ -58,6 +60,8 @@ export function ViewerControls({
   onFitToView,
   onReplayDemo,
   demoPlayed,
+  colorMode,
+  onToggleColorMode,
 }: ViewerControlsProps) {
   const showPause = animating && !paused;
 
@@ -89,6 +93,17 @@ export function ViewerControls({
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
           <path d="M2 12L8 8L14 12" />
           <path d="M2 12L8 14L14 12" />
+        </svg>
+      </IconButton>
+
+      <IconButton
+        title={`Colors: ${colorMode === "original" ? "Original" : "Distinct"}`}
+        active={colorMode === "distinct"}
+        onClick={onToggleColorMode}
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+          <circle cx="6" cy="6" r="3.5" />
+          <circle cx="10" cy="10" r="3.5" />
         </svg>
       </IconButton>
 
