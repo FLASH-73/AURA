@@ -128,6 +128,7 @@ class AssemblyGraph(BaseModel):
     parts: dict[str, Part] = Field(default_factory=dict)
     steps: dict[str, AssemblyStep] = Field(default_factory=dict)
     step_order: list[str] = Field(default_factory=list, alias="stepOrder")
+    unit_scale: float = Field(1.0, alias="unitScale")
 
     @classmethod
     def from_json_file(cls, path: Path) -> AssemblyGraph:

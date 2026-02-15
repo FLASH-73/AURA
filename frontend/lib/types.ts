@@ -71,6 +71,7 @@ export interface Assembly {
   parts: Record<string, Part>;
   steps: Record<string, AssemblyStep>;
   stepOrder: string[];
+  unitScale?: number;
 }
 
 export interface StepRuntimeState {

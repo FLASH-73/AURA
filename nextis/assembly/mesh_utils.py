@@ -322,21 +322,25 @@ def tessellate_to_glb(
     shape: Any,
     output_path: Path,
     linear_deflection: float = 0.001,
+    unit_scale: float = 1.0,
 ) -> tuple[bool, list[float]]:
     """Tessellate an OCC shape and export as GLB via trimesh.
 
-    The mesh is centered at local origin (centroid subtracted).  Returns
-    the centroid offset so the caller can reconstruct the world position.
+    The mesh is centered at local origin (bbox center subtracted).  All
+    vertex data is scaled by *unit_scale* so the output GLB always contains
+    metre-scale geometry.  Returns the bbox center (in metres) so the
+    caller can reconstruct the world position.
 
     Args:
         shape: OCC TopoDS_Shape to tessellate.
         output_path: File path for the .glb output.
         linear_deflection: Mesh density (metres). Lower = finer.
+        unit_scale: Factor to convert source coordinates to metres.
+            1.0 for files already in metres, 0.001 for files in mm.
 
     Returns:
-        Tuple of (success, centroid_xyz).  centroid_xyz is the mean of
-        tessellated vertex positions in the original coordinate frame,
-        or [0, 0, 0] if tessellation failed.
+        Tuple of (success, bbox_center_xyz).  bbox_center_xyz is the
+        bounding box center in metres, or [0, 0, 0] if tessellation failed.
     """
     if not HAS_TRIMESH:
         logger.warning("trimesh not installed, skipping GLB export")
@@ -398,19 +402,23 @@ def tessellate_to_glb(
         verts = np.array(all_verts, dtype=np.float64)
         faces = np.array(all_faces, dtype=np.int64)
 
+        # Convert source units to metres before any further processing.
+        if abs(unit_scale - 1.0) > 1e-9:
+            verts *= unit_scale
+
         # Center vertices at local origin so Part.position is the sole placement.
-        # OCC face transforms may include assembly-level placement, causing
-        # double-positioning when the frontend also applies Part.position.
-        centroid = verts.mean(axis=0)
-        centroid_list = [round(float(c), 6) for c in centroid]
-        if np.linalg.norm(centroid) > 1e-6:
-            verts -= centroid
+        # Use bounding box center (not vertex mean) to avoid position drift
+        # on parts with non-uniform mesh density (gears, holes, etc.).
+        bbox_center = (verts.min(axis=0) + verts.max(axis=0)) / 2
+        bbox_center_list = [round(float(c), 6) for c in bbox_center]
+        if np.linalg.norm(bbox_center) > 1e-6:
+            verts -= bbox_center
             logger.debug(
                 "Recentered %s by [%.6f, %.6f, %.6f]",
                 output_path.name,
-                centroid[0],
-                centroid[1],
-                centroid[2],
+                bbox_center[0],
+                bbox_center[1],
+                bbox_center[2],
             )
 
         bbox_min = verts.min(axis=0)
@@ -432,7 +440,7 @@ def tessellate_to_glb(
             len(faces),
             mesh.is_watertight,
         )
-        return True, centroid_list
+        return True, bbox_center_list
 
     except Exception as exc:
         logger.warning("GLB export failed for %s: %s", output_path.name, exc)

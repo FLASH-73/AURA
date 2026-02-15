@@ -25,7 +25,7 @@ function GlbMesh({ url }: { url: string }) {
 
   // Deep clone with independent geometry + material per mesh, so React
   // reconciliation cannot dispose shared WebGL buffers from the useGLTF cache.
-  // Scale 0.001: OCC tessellation outputs mm, Three.js scene uses metres.
+  // GLB meshes are normalised to metres by the backend (tessellate_to_glb).
   const cloned = useMemo(() => {
     const root = scene.clone(true);
     root.traverse((child) => {
@@ -41,7 +41,7 @@ function GlbMesh({ url }: { url: string }) {
     return root;
   }, [scene]);
 
-  return <primitive object={cloned} scale={0.001} castShadow receiveShadow />;
+  return <primitive object={cloned} castShadow receiveShadow />;
 }
 
 // ---------------------------------------------------------------------------
