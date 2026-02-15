@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import math
+import re
 from pathlib import Path
 from typing import Any
 
@@ -25,8 +26,10 @@ try:
     from OCP.BRepAdaptor import BRepAdaptor_Surface
     from OCP.BRepBndLib import BRepBndLib as brepbndlib
     from OCP.BRepGProp import BRepGProp
+    from OCP.BRepLib import BRepLib
     from OCP.BRepMesh import BRepMesh_IncrementalMesh
     from OCP.GeomAbs import GeomAbs_Plane
+    from OCP.gp import gp_Dir
     from OCP.GProp import GProp_GProps
     from OCP.TopAbs import TopAbs_FACE, TopAbs_REVERSED
     from OCP.TopExp import TopExp_Explorer
@@ -41,8 +44,10 @@ except ImportError:
         from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
         from OCC.Core.BRepBndLib import brepbndlib
         from OCC.Core.BRepGProp import BRepGProp
+        from OCC.Core.BRepLib import BRepLib
         from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
         from OCC.Core.GeomAbs import GeomAbs_Plane
+        from OCC.Core.gp import gp_Dir
         from OCC.Core.GProp import GProp_GProps
         from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_REVERSED
         from OCC.Core.TopExp import TopExp_Explorer
@@ -86,10 +91,20 @@ _PART_COLORS = [
 ]
 
 
+def _base_part_name(name: str) -> str:
+    """Strip trailing instance suffix (_2, _3, etc.) to get the base part type."""
+    return re.sub(r"_(\d+)$", "", name)
+
+
 def color_for_part(name: str, index: int) -> str:
-    """Return a deterministic hex colour for a part."""
-    h = int(hashlib.md5(name.encode()).hexdigest()[:8], 16)  # noqa: S324
-    return _PART_COLORS[(h + index) % len(_PART_COLORS)]
+    """Return a deterministic hex colour for a part type.
+
+    Parts with the same base name (e.g. 'bearing_v1' and 'bearing_v1_2')
+    get the same color. Different base names get different colors.
+    """
+    base = _base_part_name(name)
+    h = int(hashlib.md5(base.encode()).hexdigest()[:8], 16)  # noqa: S324
+    return _PART_COLORS[h % len(_PART_COLORS)]
 
 
 # ---------------------------------------------------------------------------
@@ -359,9 +374,20 @@ def tessellate_to_glb(
         return False, [0.0, 0.0, 0.0]
 
     try:
-        BRepMesh_IncrementalMesh(shape, linear_deflection)
+        # Adaptive tessellation: finer mesh for smaller parts
+        try:
+            _, extents, _ = compute_bounding_box(shape)
+            diag = math.sqrt(sum(e * e for e in extents)) * unit_scale
+            adaptive_deflection = max(diag * 0.005, linear_deflection * 0.2)
+            adaptive_deflection = min(adaptive_deflection, linear_deflection)
+        except Exception:
+            adaptive_deflection = linear_deflection
+
+        BRepMesh_IncrementalMesh(shape, adaptive_deflection)
+        _static(BRepLib, "EnsureNormalConsistency")(shape)
 
         all_verts: list[list[float]] = []
+        all_normals: list[list[float]] = []
         all_faces: list[list[int]] = []
         offset = 0
 
@@ -382,10 +408,22 @@ def tessellate_to_glb(
                 # Reversed faces have inward normals — flip winding to fix
                 is_reversed = face.Orientation() == TopAbs_REVERSED
 
+                has_face_normals = triangulation.HasNormals()
                 for i in range(1, nb_nodes + 1):
                     pt = triangulation.Node(i)
                     pt.Transform(trsf)
                     all_verts.append([pt.X(), pt.Y(), pt.Z()])
+
+                    if has_face_normals:
+                        normal = triangulation.Normal(i)
+                        nd = gp_Dir(normal.X(), normal.Y(), normal.Z())
+                        nd.Transform(trsf)
+                        nx, ny, nz = nd.X(), nd.Y(), nd.Z()
+                        if is_reversed:
+                            nx, ny, nz = -nx, -ny, -nz
+                        all_normals.append([nx, ny, nz])
+                    else:
+                        all_normals.append([0.0, 0.0, 0.0])
 
                 for i in range(1, nb_tris + 1):
                     tri = triangulation.Triangle(i)
@@ -447,10 +485,21 @@ def tessellate_to_glb(
             *bbox_max,
         )
 
-        mesh = trimesh.Trimesh(vertices=verts, faces=faces, process=True)
-        trimesh.repair.fix_normals(mesh)
-        # TODO: crease-angle vertex splitting (>30° dihedral) for sharp-edge normals.
-        # trimesh lacks built-in support; would need manual face-adjacency grouping.
+        # Convert normals from OCC Z-up to Three.js Y-up: [x, y, z] → [x, z, -y]
+        normals = np.array(all_normals, dtype=np.float64)
+        normals_y = normals[:, 1].copy()
+        normals[:, 1] = normals[:, 2]
+        normals[:, 2] = -normals_y
+
+        has_normals = np.any(np.abs(normals) > 1e-6)
+        mesh = trimesh.Trimesh(
+            vertices=verts,
+            faces=faces,
+            vertex_normals=normals if has_normals else None,
+            process=not has_normals,
+        )
+        if not has_normals:
+            trimesh.repair.fix_normals(mesh)
 
         # Embed PBR material with per-part colour
         if color and len(color) == 7 and color.startswith("#"):

@@ -435,6 +435,14 @@ class CADParser:
                     r = int(c.Red() * 255)
                     g = int(c.Green() * 255)
                     b = int(c.Blue() * 255)
+                    # Filter colors too dark or too bright for PBR rendering
+                    luminance = 0.299 * r + 0.587 * g + 0.114 * b
+                    if luminance < 25:
+                        logger.debug("Skipping near-black color (%d,%d,%d) for label", r, g, b)
+                        return None
+                    if luminance > 240:
+                        logger.debug("Skipping near-white color (%d,%d,%d) for label", r, g, b)
+                        return None
                     return f"#{r:02X}{g:02X}{b:02X}"
         except Exception:
             pass
