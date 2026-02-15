@@ -12,21 +12,19 @@ Upload a CAD file → auto-generate assembly plan → teach the hard steps → r
 4. **Learn** — Train per-step policies from demos (ACT, Diffusion Policy via LeRobot)
 5. **Run** — Execute assembly autonomously with retry + human fallback
 
-## Quick Start (Demo Mode)
+## Quick Start
 
 ```bash
 # Backend
 conda activate nextis
 pip install -e ".[dev]"
-python scripts/demo.py
+python scripts/run_api.py
 
 # Frontend (separate terminal)
 cd frontend && npm install && npm run dev
 ```
 
 Open http://localhost:3000
-
-Press **Space** to start the assembly. The 57-step gearbox runs through stub primitives with real-time WebSocket state updates.
 
 ## Stack
 
@@ -40,16 +38,16 @@ Press **Space** to start the assembly. The 57-step gearbox runs through stub pri
 ```
 nextis/
 ├── hardware/       # Motor control, arm registry, mock hardware
-├── control/        # 60Hz teleop loop, force feedback, primitives
-├── assembly/       # CAD parsing (STEP → GLB), assembly graph, sequence planning
+├── control/        # 60Hz teleop loop, force feedback, safety, homing
+├── assembly/       # CAD parsing (STEP → GLB), layout, sequence planning
 ├── execution/      # Task sequencer, policy router, state machine
-├── learning/       # Per-step HDF5 recording (50Hz)
+├── learning/       # HDF5 recording, replay buffer, SAC, RL trainer
 ├── analytics/      # JSON-backed per-step metrics
 ├── perception/     # Step completion classifiers (planned)
 └── api/            # FastAPI — HTTP/WebSocket layer + routes
-frontend/           # Next.js dashboard (3D viewer, step list, controls)
+frontend/           # Next.js dashboard (3D viewer, animation, controls)
 configs/            # Assembly JSON + arm YAML
-scripts/            # Demo launcher, utilities
+scripts/            # API launcher, demo scripts
 ```
 
 **Central data model:** Everything is indexed by the assembly graph. Recording, training, execution, and analytics are all per-step.

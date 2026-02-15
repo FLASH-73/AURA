@@ -59,12 +59,8 @@ configs/arms/settings.yaml
 # Calibration data (machine-specific)
 configs/calibration/*/
 
-# Generated mesh files
-data/meshes/
-
-# Recorded demos and analytics
-data/demos/
-data/analytics/
+# Runtime data (meshes, demos, policies, analytics — all generated)
+data/
 
 # LeRobot submodule outputs
 lerobot/outputs/
