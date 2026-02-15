@@ -142,8 +142,8 @@ export function RecordingControls({ stepId, assemblyId }: RecordingControlsProps
           </div>
         </div>
       ) : (
-        <ActionButton variant="secondary" onClick={() => void handleStart()}>
-          Record Demos
+        <ActionButton variant="primary" onClick={() => void handleStart()}>
+          Record Demo
         </ActionButton>
       )}
 

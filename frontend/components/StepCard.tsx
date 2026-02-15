@@ -12,7 +12,7 @@ interface StepCardProps {
 }
 
 function StepIndicator({ index, status }: { index: number; status: StepRuntimeState["status"] }) {
-  const circle = "flex h-7 w-7 shrink-0 items-center justify-center rounded-full";
+  const circle = "flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full";
 
   if (status === "success") {
     return (
@@ -36,7 +36,7 @@ function StepIndicator({ index, status }: { index: number; status: StepRuntimeSt
 
   if (status === "running") {
     return (
-      <div className={`${circle} animate-pulse-subtle bg-accent`}>
+      <div className={`${circle} animate-pulse-subtle bg-status-running`}>
         <span className="font-mono text-[13px] font-semibold text-white">{index}</span>
       </div>
     );
@@ -60,7 +60,7 @@ function StepIndicator({ index, status }: { index: number; status: StepRuntimeSt
 
   return (
     <div className={`${circle} border-[1.5px] border-bg-tertiary`}>
-      <span className="font-mono text-[13px] font-medium tabular-nums text-text-tertiary">
+      <span className="font-mono text-[10px] font-medium tabular-nums text-text-tertiary">
         {index}
       </span>
     </div>
@@ -82,7 +82,7 @@ export function StepCard({ step, stepIndex, runtimeState, isSelected, onClick }:
     <button
       onClick={onClick}
       className={`flex w-full items-center gap-3 border-b border-bg-tertiary px-4 py-3 text-left transition-colors hover:bg-bg-secondary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal ${
-        isSelected ? "border-l-2 border-l-accent" : "border-l-2 border-l-transparent"
+        isSelected ? "border-l-2 border-l-text-tertiary" : "border-l-2 border-l-transparent"
       }`}
     >
       <StepIndicator index={stepIndex} status={runtimeState.status} />

@@ -2,7 +2,7 @@
 
 import type { ButtonHTMLAttributes } from "react";
 
-type Variant = "primary" | "secondary" | "danger";
+type Variant = "primary" | "secondary" | "ghost" | "danger";
 
 interface ActionButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
@@ -12,7 +12,9 @@ const VARIANT_CLASSES: Record<Variant, string> = {
   primary:
     "bg-accent text-white hover:bg-accent-hover focus-visible:ring-signal",
   secondary:
-    "bg-transparent border border-bg-tertiary text-text-primary hover:bg-bg-secondary focus-visible:ring-signal",
+    "bg-bg-secondary text-text-secondary hover:bg-bg-tertiary focus-visible:ring-signal",
+  ghost:
+    "bg-transparent border border-bg-tertiary text-text-tertiary hover:bg-bg-secondary hover:text-text-secondary focus-visible:ring-signal",
   danger:
     "bg-status-error text-white hover:bg-status-error/90 focus-visible:ring-status-error",
 };

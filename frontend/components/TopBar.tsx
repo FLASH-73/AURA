@@ -21,7 +21,7 @@ function ConnectionDot() {
     dotClass = "bg-status-success";
     label = "Connected";
   } else if (isReconnecting) {
-    dotClass = "bg-amber-400";
+    dotClass = "bg-status-warning";
     label = "Reconnecting\u2026";
   }
 

@@ -89,7 +89,7 @@ export function UploadPreview({ assembly }: UploadPreviewProps) {
       style={{
         height: 200,
         borderRadius: 8,
-        background: "radial-gradient(ellipse at 45% 40%, #FEFDFB 0%, #F9F7F3 80%)",
+        background: "radial-gradient(ellipse at 45% 40%, #FAF9F7 0%, #F0EDE8 100%)",
       }}
     >
       <ambientLight intensity={0.4} />

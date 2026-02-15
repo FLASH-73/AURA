@@ -31,7 +31,12 @@ export function RunControls() {
   return (
     <>
       <div className="flex items-center gap-2">
-        {isPaused ? (
+        {isRunning ? (
+          <span className="inline-flex items-center gap-2 rounded-md bg-status-running px-4 py-2 text-[13px] font-semibold text-white">
+            <span className="h-[5px] w-[5px] animate-pulse rounded-full bg-white" />
+            Running
+          </span>
+        ) : isPaused ? (
           <ActionButton variant="primary" onClick={resumeExecution}>
             Resume
           </ActionButton>
@@ -62,7 +67,7 @@ export function RunControls() {
         </ActionButton>
 
         <ActionButton
-          variant="danger"
+          variant="ghost"
           onClick={stopExecution}
           disabled={isIdle}
         >

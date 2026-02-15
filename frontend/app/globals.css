@@ -1,41 +1,41 @@
 @import "tailwindcss";
 
 @theme inline {
-  /* Backgrounds — warm palette */
-  --color-bg-primary: #FEFDFB;
-  --color-bg-secondary: #F9F7F3;
-  --color-bg-tertiary: #E8E3DD;
-  --color-bg-viewer: #FEFDFB;
+  /* Backgrounds — warm stone base */
+  --color-bg-primary: #FAF9F7;
+  --color-bg-secondary: #F5F3F0;
+  --color-bg-tertiary: #E0DDD8;
+  --color-bg-viewer: #FAF9F7;
   --color-bg-elevated: #FFFFFF;
 
-  /* Text — warm stone */
-  --color-text-primary: #1C1917;
-  --color-text-secondary: #57534E;
-  --color-text-tertiary: #A8A29E;
+  /* Text — warm ink */
+  --color-text-primary: #1A1918;
+  --color-text-secondary: #6B6560;
+  --color-text-tertiary: #A39E98;
 
-  /* Brand — warm orange accent */
-  --color-accent: #C2410C;
-  --color-accent-hover: #9A3412;
-  --color-accent-light: #FFF7ED;
+  /* Accent — dark neutral (no chromatic color) */
+  --color-accent: #1A1918;
+  --color-accent-hover: #2D2B29;
+  --color-accent-light: #F0ECE6;
 
-  /* Signal — deeper sky blue */
-  --color-signal: #0369A1;
-  --color-signal-light: #E0F2FE;
+  /* Signal — active blue */
+  --color-signal: #1D7AFC;
+  --color-signal-light: #E9F2FF;
 
-  /* Status */
-  --color-status-success: #16A34A;
-  --color-status-running: #0369A1;
-  --color-status-warning: #CA8A04;
-  --color-status-error: #DC2626;
-  --color-status-human: #7C3AED;
-  --color-status-pending: #D4D4D8;
+  /* Status — the ONLY chromatic colors in the UI */
+  --color-status-success: #22A06B;
+  --color-status-running: #1D7AFC;
+  --color-status-warning: #B38600;
+  --color-status-error: #DE350B;
+  --color-status-human: #8270DB;
+  --color-status-pending: #C9C4BD;
 
   /* Status backgrounds */
-  --color-status-success-bg: #F0FDF4;
-  --color-status-running-bg: #E0F2FE;
-  --color-status-warning-bg: #FEFCE8;
-  --color-status-error-bg: #FEF2F2;
-  --color-status-human-bg: #F5F3FF;
+  --color-status-success-bg: #E3FCEF;
+  --color-status-running-bg: #E9F2FF;
+  --color-status-warning-bg: #FFF7D6;
+  --color-status-error-bg: #FFEBE6;
+  --color-status-human-bg: #F3F0FF;
 
   /* Fonts */
   --font-sans: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;

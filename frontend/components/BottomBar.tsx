@@ -28,7 +28,7 @@ function HardwareIndicator() {
     hw.connected === hw.totalArms
       ? "bg-status-success"
       : hw.connected > 0
-        ? "bg-amber-400"
+        ? "bg-status-warning"
         : "bg-text-tertiary";
 
   return (
@@ -65,10 +65,11 @@ export function BottomBar() {
   return (
     <footer className="flex h-10 shrink-0 items-center justify-center gap-6 border-t border-bg-tertiary px-6">
       <HardwareIndicator />
+      <div className="h-[18px] w-px bg-bg-tertiary" />
       <TeleopToggle />
       {items.map((item, i) => (
         <Fragment key={item.label}>
-          {i === 0 && <div className="h-5 w-px bg-bg-tertiary" />}
+          {i === 0 && <div className="h-[18px] w-px bg-bg-tertiary" />}
           <div className="flex flex-col items-center">
             <span className="text-[9px] font-medium uppercase tracking-[0.06em] text-text-tertiary leading-none">
               {item.label}
@@ -77,7 +78,7 @@ export function BottomBar() {
               {item.value}
             </span>
           </div>
-          {i < items.length - 1 && <div className="h-5 w-px bg-bg-tertiary" />}
+          {i < items.length - 1 && <div className="h-[18px] w-px bg-bg-tertiary" />}
         </Fragment>
       ))}
     </footer>
