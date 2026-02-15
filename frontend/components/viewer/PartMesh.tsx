@@ -3,8 +3,8 @@
 import { Suspense, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Edges, useGLTF } from "@react-three/drei";
-import type { Group, MeshStandardMaterial } from "three";
-import { DoubleSide, Mesh } from "three";
+import type { Group } from "three";
+import { DoubleSide, Mesh, MeshPhysicalMaterial } from "three";
 import type { Part } from "@/lib/types";
 import type { PartRenderState } from "@/lib/animation";
 import { GraspPoint } from "./GraspPoint";
@@ -33,9 +33,18 @@ function GlbMesh({ url }: { url: string }) {
       if ((child as Mesh).isMesh) {
         const m = child as Mesh;
         m.geometry = m.geometry.clone();
-        const mat = (m.material as MeshStandardMaterial).clone();
-        mat.side = DoubleSide;
-        m.material = mat;
+        const oldMat = m.material as MeshPhysicalMaterial;
+        const newMat = new MeshPhysicalMaterial({
+          color: oldMat.color,
+          map: oldMat.map,
+          roughness: oldMat.roughness ?? 0.4,
+          metalness: oldMat.metalness ?? 0.15,
+          clearcoat: 0.15,
+          clearcoatRoughness: 0.3,
+          side: DoubleSide,
+        });
+        m.userData.originalColor = oldMat.color.getHexString();
+        m.material = newMat;
       }
     });
     return root;
@@ -66,7 +75,7 @@ export function PartMesh({
   onClick,
 }: PartMeshProps) {
   const groupRef = useRef<Group>(null);
-  const matRef = useRef<MeshStandardMaterial>(null);
+  const matRef = useRef<MeshPhysicalMaterial>(null);
   const dims = part.dimensions ?? [0.05, 0.05, 0.05];
   const hasGlb = !!part.meshFile;
 
@@ -123,14 +132,17 @@ export function PartMesh({
       // GLB path: traverse all meshes in the loaded scene
       groupRef.current.traverse((child) => {
         if ((child as Mesh).isMesh) {
-          const mat = (child as Mesh).material as MeshStandardMaterial;
+          const mat = (child as Mesh).material as MeshPhysicalMaterial;
           if (mat.color) {
             mat.opacity = opacity;
             mat.transparent = transparent;
             mat.wireframe = wire;
+            // Color: override > ghost > restore original GLB color
             if (rs.colorOverride) mat.color.set(rs.colorOverride);
             else if (isGhost) mat.color.set(GHOST_COLOR);
-            else if (effectiveState === "complete" && !isSelected) mat.color.set(COMPLETE_COLOR);
+            else if ((child as Mesh).userData.originalColor) {
+              mat.color.set(`#${(child as Mesh).userData.originalColor}`);
+            }
             if (mat.emissive) {
               if (isSelected && !isGhost) {
                 mat.emissive.set(ACCENT_COLOR);
@@ -188,7 +200,7 @@ export function PartMesh({
             fallback={
               <mesh castShadow receiveShadow>
                 <PlaceholderGeometry geometry={part.geometry ?? "box"} dimensions={dims} />
-                <meshStandardMaterial color={part.color ?? "#B0AEA8"} roughness={0.45} metalness={0.25} />
+                <meshPhysicalMaterial color={part.color ?? "#B0AEA8"} roughness={0.4} metalness={0.15} clearcoat={0.15} clearcoatRoughness={0.3} />
               </mesh>
             }
           >
@@ -198,11 +210,13 @@ export function PartMesh({
       ) : (
         <mesh castShadow receiveShadow>
           <PlaceholderGeometry geometry={part.geometry ?? "box"} dimensions={dims} />
-          <meshStandardMaterial
+          <meshPhysicalMaterial
             ref={matRef}
             color={part.color ?? "#B0AEA8"}
-            roughness={0.45}
-            metalness={0.25}
+            roughness={0.4}
+            metalness={0.15}
+            clearcoat={0.15}
+            clearcoatRoughness={0.3}
             transparent
             opacity={1}
           />

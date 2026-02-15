@@ -258,20 +258,33 @@ export function AssemblyViewer() {
         style={{ background: "radial-gradient(ellipse at 45% 40%, #FAF9F7 0%, #F0EDE8 100%)" }}
         shadows
         eventPrefix="offset"
+        gl={{ antialias: true, toneMapping: 4, toneMappingExposure: 1.1 }}
       >
         <CameraSetup layout={layout} controlsRef={controlsRef} />
 
-        <ambientLight intensity={0.4} />
+        {/* Key light — warm, high, casting shadows */}
         <directionalLight
-          position={[5, 8, 3]}
-          intensity={0.7}
+          position={[5, 10, 4]}
+          intensity={1.2}
           castShadow
-          shadow-mapSize={[1024, 1024]}
-          shadow-bias={-0.0005}
+          shadow-mapSize={[2048, 2048]}
+          shadow-bias={-0.0003}
+          shadow-camera-near={0.1}
+          shadow-camera-far={50}
+          shadow-camera-left={-2}
+          shadow-camera-right={2}
+          shadow-camera-top={2}
+          shadow-camera-bottom={-2}
+          color="#fff8f0"
         />
-        <directionalLight position={[-3, 4, -2]} intensity={0.3} />
-        <directionalLight position={[0, -2, 5]} intensity={0.15} />
-        <Environment preset="studio" environmentIntensity={0.3} />
+        {/* Fill light — cool, softer */}
+        <directionalLight position={[-4, 6, -3]} intensity={0.4} color="#f0f4ff" />
+        {/* Rim/back light — subtle edge definition */}
+        <directionalLight position={[0, 3, -8]} intensity={0.25} color="#ffffff" />
+        {/* Ambient — low, just to prevent pure black */}
+        <ambientLight intensity={0.2} />
+        {/* HDRI environment — drives reflections on physical materials */}
+        <Environment preset="studio" environmentIntensity={0.6} />
         {showGround && (
           <GroundPlane
             groundY={layout.groundY}
