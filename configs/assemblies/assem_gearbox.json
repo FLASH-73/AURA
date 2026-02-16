@@ -5,7 +5,7 @@
     "sts3215_original_v1": {
       "id": "sts3215_original_v1",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/sts3215_original_v1.glb?v=1771178192",
+      "meshFile": "/meshes/assem_gearbox/sts3215_original_v1.glb?v=1771274660",
       "graspPoints": [],
       "position": [
         -0.001256,
@@ -39,10 +39,10 @@
     "6708_bearing_v1": {
       "id": "6708_bearing_v1",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/6708_bearing_v1.glb?v=1771178193",
+      "meshFile": "/meshes/assem_gearbox/6708_bearing_v1.glb?v=1771274660",
       "graspPoints": [],
       "position": [
-        -0.001257,
+        -0.001256,
         0.055528,
         -0.008663
       ],
@@ -57,7 +57,7 @@
         0.006,
         0.05
       ],
-      "color": "#B8955B",
+      "color": "#9B7B8B",
       "layoutPosition": [
         0.185225,
         0.003,
@@ -73,10 +73,10 @@
     "sts3215_servo_horn_v1": {
       "id": "sts3215_servo_horn_v1",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/sts3215_servo_horn_v1.glb?v=1771178193",
+      "meshFile": "/meshes/assem_gearbox/sts3215_servo_horn_v1.glb?v=1771274661",
       "graspPoints": [],
       "position": [
-        -0.001257,
+        -0.001256,
         0.028278,
         -0.008663
       ],
@@ -91,7 +91,7 @@
         0.0045000000000000005,
         0.02
       ],
-      "color": "#6B9B7B",
+      "color": "#5B8DB8",
       "layoutPosition": [
         -0.185225,
         0.00225,
@@ -107,7 +107,7 @@
     "bearing6704_v1": {
       "id": "bearing6704_v1",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/bearing6704_v1.glb?v=1771178193",
+      "meshFile": "/meshes/assem_gearbox/bearing6704_v1.glb?v=1771274661",
       "graspPoints": [],
       "position": [
         -0.001256,
@@ -125,7 +125,7 @@
         0.004,
         0.027
       ],
-      "color": "#6B9B7B",
+      "color": "#6B8B5B",
       "layoutPosition": [
         -0.185225,
         0.002,
@@ -141,7 +141,7 @@
     "generic_base_sts3215_v2": {
       "id": "generic_base_sts3215_v2",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/generic_base_sts3215_v2.glb?v=1771178193",
+      "meshFile": "/meshes/assem_gearbox/generic_base_sts3215_v2.glb?v=1771274662",
       "graspPoints": [],
       "position": [
         -0.001256,
@@ -159,7 +159,7 @@
         0.030000001000000002,
         0.065000001
       ],
-      "color": "#8B6E50",
+      "color": "#5B7B6B",
       "layoutPosition": [
         0.0,
         0.01500001175833099,
@@ -175,7 +175,7 @@
     "spur_gear_12_teeth": {
       "id": "spur_gear_12_teeth",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/spur_gear_12_teeth.glb?v=1771178193",
+      "meshFile": "/meshes/assem_gearbox/spur_gear_12_teeth.glb?v=1771274662",
       "graspPoints": [],
       "position": [
         -0.017886,
@@ -193,7 +193,7 @@
         0.01,
         0.013939761
       ],
-      "color": "#6B8B5B",
+      "color": "#8B7B5B",
       "layoutPosition": [
         -0.185225,
         0.005,
@@ -209,7 +209,7 @@
     "spur_gear_12_teeth_2": {
       "id": "spur_gear_12_teeth_2",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/spur_gear_12_teeth_2.glb?v=1771178193",
+      "meshFile": "/meshes/assem_gearbox/spur_gear_12_teeth_2.glb?v=1771274662",
       "graspPoints": [],
       "position": [
         0.015373,
@@ -223,14 +223,14 @@
       ],
       "geometry": "box",
       "dimensions": [
-        0.013940812,
-        0.010001051,
-        0.013940812
+        0.013939973,
+        0.010000212,
+        0.013939973
       ],
-      "color": "#5B8DB8",
+      "color": "#8B7B5B",
       "layoutPosition": [
         0.061742,
-        0.005001,
+        0.005,
         0.389607
       ],
       "layoutRotation": [
@@ -243,7 +243,7 @@
     "spur_gear_12_teeth_3": {
       "id": "spur_gear_12_teeth_3",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/spur_gear_12_teeth_3.glb?v=1771178193",
+      "meshFile": "/meshes/assem_gearbox/spur_gear_12_teeth_3.glb?v=1771274663",
       "graspPoints": [],
       "position": [
         0.005632,
@@ -257,14 +257,14 @@
       ],
       "geometry": "box",
       "dimensions": [
-        0.013940812,
-        0.010001051,
-        0.013940812
+        0.013939973,
+        0.010000212,
+        0.013939973
       ],
-      "color": "#8B6E50",
+      "color": "#8B7B5B",
       "layoutPosition": [
         -0.308708,
-        0.005001,
+        0.005,
         0.52191
       ],
       "layoutRotation": [
@@ -277,7 +277,7 @@
     "spur_gear_12_teeth_4": {
       "id": "spur_gear_12_teeth_4",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/spur_gear_12_teeth_4.glb?v=1771178193",
+      "meshFile": "/meshes/assem_gearbox/spur_gear_12_teeth_4.glb?v=1771274663",
       "graspPoints": [],
       "position": [
         -0.008145,
@@ -291,14 +291,14 @@
       ],
       "geometry": "box",
       "dimensions": [
-        0.013940812,
-        0.010001051,
-        0.013940812
+        0.013939973,
+        0.010000212,
+        0.013939973
       ],
-      "color": "#6B9B7B",
+      "color": "#8B7B5B",
       "layoutPosition": [
         0.061742,
-        0.005001,
+        0.005,
         0.52191
       ],
       "layoutRotation": [
@@ -311,7 +311,7 @@
     "satellite_top_v3": {
       "id": "satellite_top_v3",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/satellite_top_v3.glb?v=1771178193",
+      "meshFile": "/meshes/assem_gearbox/satellite_top_v3.glb?v=1771274663",
       "graspPoints": [],
       "position": [
         -0.001256,
@@ -329,7 +329,7 @@
         0.011,
         0.042
       ],
-      "color": "#6B8B5B",
+      "color": "#6B9B7B",
       "layoutPosition": [
         -0.061742,
         0.0055,
@@ -345,7 +345,7 @@
     "satellite_base_v1": {
       "id": "satellite_base_v1",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/satellite_base_v1.glb?v=1771178194",
+      "meshFile": "/meshes/assem_gearbox/satellite_base_v1.glb?v=1771274665",
       "graspPoints": [],
       "position": [
         -0.001256,
@@ -363,7 +363,7 @@
         0.004,
         0.042
       ],
-      "color": "#5B8DB8",
+      "color": "#6B9B7B",
       "layoutPosition": [
         0.061742,
         0.002,
@@ -379,7 +379,7 @@
     "spur_gear_24_teeth": {
       "id": "spur_gear_24_teeth",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/spur_gear_24_teeth.glb?v=1771178195",
+      "meshFile": "/meshes/assem_gearbox/spur_gear_24_teeth.glb?v=1771274666",
       "graspPoints": [],
       "position": [
         -0.001256,
@@ -395,7 +395,7 @@
       "dimensions": [
         0.0135
       ],
-      "color": "#5B8DB8",
+      "color": "#8B6E50",
       "layoutPosition": [
         -0.061742,
         0.00675,
@@ -411,7 +411,7 @@
     "ring_gear_v1": {
       "id": "ring_gear_v1",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/ring_gear_v1.glb?v=1771178196",
+      "meshFile": "/meshes/assem_gearbox/ring_gear_v1.glb?v=1771274669",
       "graspPoints": [],
       "position": [
         -0.001256,
@@ -445,7 +445,7 @@
     "spacer_5xm3x15_v1": {
       "id": "spacer_5xm3x15_v1",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/spacer_5xm3x15_v1.glb?v=1771178196",
+      "meshFile": "/meshes/assem_gearbox/spacer_5xm3x15_v1.glb?v=1771274669",
       "graspPoints": [],
       "position": [
         -0.020702,
@@ -462,7 +462,7 @@
         0.0025,
         0.015
       ],
-      "color": "#5B8DB8",
+      "color": "#6B8B5B",
       "layoutPosition": [
         -0.185225,
         0.0075,
@@ -478,7 +478,7 @@
     "spacer_5xm3x15_v1_2": {
       "id": "spacer_5xm3x15_v1_2",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/spacer_5xm3x15_v1_2.glb?v=1771178196",
+      "meshFile": "/meshes/assem_gearbox/spacer_5xm3x15_v1_2.glb?v=1771274669",
       "graspPoints": [],
       "position": [
         0.018189,
@@ -492,10 +492,10 @@
       ],
       "geometry": "cylinder",
       "dimensions": [
-        0.0025002502499999997,
-        0.015000995
+        0.0025000995,
+        0.015000199
       ],
-      "color": "#8B6E50",
+      "color": "#6B8B5B",
       "layoutPosition": [
         0.061742,
         0.0075,
@@ -511,7 +511,7 @@
     "spacer_5xm3x15_v1_3": {
       "id": "spacer_5xm3x15_v1_3",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/spacer_5xm3x15_v1_3.glb?v=1771178196",
+      "meshFile": "/meshes/assem_gearbox/spacer_5xm3x15_v1_3.glb?v=1771274669",
       "graspPoints": [],
       "position": [
         0.018189,
@@ -525,10 +525,10 @@
       ],
       "geometry": "cylinder",
       "dimensions": [
-        0.0025002502499999997,
-        0.015000995
+        0.0025000995,
+        0.015000199
       ],
-      "color": "#6B9B7B",
+      "color": "#6B8B5B",
       "layoutPosition": [
         0.308708,
         0.0075,
@@ -544,7 +544,7 @@
     "spacer_5xm3x15_v1_4": {
       "id": "spacer_5xm3x15_v1_4",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/spacer_5xm3x15_v1_4.glb?v=1771178196",
+      "meshFile": "/meshes/assem_gearbox/spacer_5xm3x15_v1_4.glb?v=1771274669",
       "graspPoints": [],
       "position": [
         -0.020702,
@@ -558,10 +558,10 @@
       ],
       "geometry": "cylinder",
       "dimensions": [
-        0.0025002502499999997,
-        0.015000995
+        0.0025000995,
+        0.015000199
       ],
-      "color": "#9B7B8B",
+      "color": "#6B8B5B",
       "layoutPosition": [
         -0.308708,
         0.0075,
@@ -577,12 +577,12 @@
     "mr63zz_bearing_v1": {
       "id": "mr63zz_bearing_v1",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/mr63zz_bearing_v1.glb?v=1771178196",
+      "meshFile": "/meshes/assem_gearbox/mr63zz_bearing_v1.glb?v=1771274669",
       "graspPoints": [],
       "position": [
         0.005632,
         0.045178,
-        -0.025292
+        -0.025293
       ],
       "rotation": [
         0.0,
@@ -595,7 +595,7 @@
         0.0025,
         0.006
       ],
-      "color": "#6B9B7B",
+      "color": "#5B7B6B",
       "layoutPosition": [
         -0.185225,
         0.00125,
@@ -611,7 +611,7 @@
     "mr63zz_bearing_v1_2": {
       "id": "mr63zz_bearing_v1_2",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/mr63zz_bearing_v1_2.glb?v=1771178196",
+      "meshFile": "/meshes/assem_gearbox/mr63zz_bearing_v1_2.glb?v=1771274669",
       "graspPoints": [],
       "position": [
         -0.008145,
@@ -625,11 +625,11 @@
       ],
       "geometry": "box",
       "dimensions": [
-        0.006000732,
-        0.002500995,
-        0.006000608
+        0.006000122,
+        0.0025002,
+        0.006000147
       ],
-      "color": "#9B7B8B",
+      "color": "#5B7B6B",
       "layoutPosition": [
         0.185225,
         0.00125,
@@ -645,7 +645,7 @@
     "mr63zz_bearing_v1_3": {
       "id": "mr63zz_bearing_v1_3",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/mr63zz_bearing_v1_3.glb?v=1771178196",
+      "meshFile": "/meshes/assem_gearbox/mr63zz_bearing_v1_3.glb?v=1771274669",
       "graspPoints": [],
       "position": [
         0.015373,
@@ -659,11 +659,11 @@
       ],
       "geometry": "box",
       "dimensions": [
-        0.006000732,
-        0.002500995,
-        0.006000608
+        0.006000122,
+        0.0025002,
+        0.006000147
       ],
-      "color": "#B8955B",
+      "color": "#5B7B6B",
       "layoutPosition": [
         0.185225,
         0.00125,
@@ -679,7 +679,7 @@
     "mr63zz_bearing_v1_4": {
       "id": "mr63zz_bearing_v1_4",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/mr63zz_bearing_v1_4.glb?v=1771178196",
+      "meshFile": "/meshes/assem_gearbox/mr63zz_bearing_v1_4.glb?v=1771274669",
       "graspPoints": [],
       "position": [
         0.015373,
@@ -693,11 +693,11 @@
       ],
       "geometry": "box",
       "dimensions": [
-        0.006000732,
-        0.002500995,
-        0.006000608
+        0.006000122,
+        0.0025002,
+        0.006000147
       ],
-      "color": "#5B8B8B",
+      "color": "#5B7B6B",
       "layoutPosition": [
         -0.061742,
         0.00125,
@@ -713,7 +713,7 @@
     "mr63zz_bearing_v1_5": {
       "id": "mr63zz_bearing_v1_5",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/mr63zz_bearing_v1_5.glb?v=1771178196",
+      "meshFile": "/meshes/assem_gearbox/mr63zz_bearing_v1_5.glb?v=1771274669",
       "graspPoints": [],
       "position": [
         -0.017886,
@@ -727,11 +727,11 @@
       ],
       "geometry": "box",
       "dimensions": [
-        0.006000732,
-        0.002500995,
-        0.006000608
+        0.006000122,
+        0.0025002,
+        0.006000147
       ],
-      "color": "#8B7B5B",
+      "color": "#5B7B6B",
       "layoutPosition": [
         -0.061742,
         0.00125,
@@ -747,7 +747,7 @@
     "mr63zz_bearing_v1_6": {
       "id": "mr63zz_bearing_v1_6",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/mr63zz_bearing_v1_6.glb?v=1771178196",
+      "meshFile": "/meshes/assem_gearbox/mr63zz_bearing_v1_6.glb?v=1771274669",
       "graspPoints": [],
       "position": [
         -0.017886,
@@ -761,11 +761,11 @@
       ],
       "geometry": "box",
       "dimensions": [
-        0.006000732,
-        0.002500995,
-        0.006000608
+        0.006000122,
+        0.0025002,
+        0.006000147
       ],
-      "color": "#7B6B9B",
+      "color": "#5B7B6B",
       "layoutPosition": [
         0.185225,
         0.00125,
@@ -781,12 +781,12 @@
     "mr63zz_bearing_v1_7": {
       "id": "mr63zz_bearing_v1_7",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/mr63zz_bearing_v1_7.glb?v=1771178196",
+      "meshFile": "/meshes/assem_gearbox/mr63zz_bearing_v1_7.glb?v=1771274669",
       "graspPoints": [],
       "position": [
         0.005632,
         0.037778,
-        -0.025292
+        -0.025293
       ],
       "rotation": [
         0.0,
@@ -795,11 +795,11 @@
       ],
       "geometry": "box",
       "dimensions": [
-        0.006000732,
-        0.002500995,
-        0.006000608
+        0.006000122,
+        0.0025002,
+        0.006000147
       ],
-      "color": "#9B8B6B",
+      "color": "#5B7B6B",
       "layoutPosition": [
         0.308708,
         0.00125,
@@ -815,7 +815,7 @@
     "mr63zz_bearing_v1_8": {
       "id": "mr63zz_bearing_v1_8",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/mr63zz_bearing_v1_8.glb?v=1771178196",
+      "meshFile": "/meshes/assem_gearbox/mr63zz_bearing_v1_8.glb?v=1771274669",
       "graspPoints": [],
       "position": [
         -0.008145,
@@ -829,9 +829,9 @@
       ],
       "geometry": "box",
       "dimensions": [
-        0.006000732,
-        0.002500995,
-        0.006000608
+        0.006000122,
+        0.0025002,
+        0.006000147
       ],
       "color": "#5B7B6B",
       "layoutPosition": [
@@ -849,7 +849,7 @@
     "1mm_spacer_v1": {
       "id": "1mm_spacer_v1",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/1mm_spacer_v1.glb?v=1771178196",
+      "meshFile": "/meshes/assem_gearbox/1mm_spacer_v1.glb?v=1771274669",
       "graspPoints": [],
       "position": [
         0.015373,
@@ -867,7 +867,7 @@
         0.001,
         0.006500000000000001
       ],
-      "color": "#5B8B8B",
+      "color": "#B8955B",
       "layoutPosition": [
         0.308708,
         0.0005,
@@ -883,7 +883,7 @@
     "1mm_spacer_v1_2": {
       "id": "1mm_spacer_v1_2",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/1mm_spacer_v1_2.glb?v=1771178196",
+      "meshFile": "/meshes/assem_gearbox/1mm_spacer_v1_2.glb?v=1771274669",
       "graspPoints": [],
       "position": [
         -0.008145,
@@ -897,11 +897,11 @@
       ],
       "geometry": "box",
       "dimensions": [
-        0.006500746999999999,
-        0.0010009950000000002,
-        0.006500746999999999
+        0.0065001220000000005,
+        0.0010002,
+        0.006500147
       ],
-      "color": "#8B7B5B",
+      "color": "#B8955B",
       "layoutPosition": [
         0.308708,
         0.0005,
@@ -917,7 +917,7 @@
     "1mm_spacer_v1_3": {
       "id": "1mm_spacer_v1_3",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/1mm_spacer_v1_3.glb?v=1771178196",
+      "meshFile": "/meshes/assem_gearbox/1mm_spacer_v1_3.glb?v=1771274669",
       "graspPoints": [],
       "position": [
         -0.017886,
@@ -931,11 +931,11 @@
       ],
       "geometry": "box",
       "dimensions": [
-        0.006500746999999999,
-        0.0010009950000000002,
-        0.006500746999999999
+        0.0065001220000000005,
+        0.0010002,
+        0.006500147
       ],
-      "color": "#7B6B9B",
+      "color": "#B8955B",
       "layoutPosition": [
         0.061742,
         0.0005,
@@ -951,7 +951,7 @@
     "1mm_spacer_v1_4": {
       "id": "1mm_spacer_v1_4",
       "cadFile": null,
-      "meshFile": "/meshes/assem_gearbox/1mm_spacer_v1_4.glb?v=1771178196",
+      "meshFile": "/meshes/assem_gearbox/1mm_spacer_v1_4.glb?v=1771274669",
       "graspPoints": [],
       "position": [
         0.005632,
@@ -965,11 +965,11 @@
       ],
       "geometry": "box",
       "dimensions": [
-        0.006500746999999999,
-        0.0010009950000000002,
-        0.006500746999999999
+        0.0065001220000000005,
+        0.0010002,
+        0.006500147
       ],
-      "color": "#9B8B6B",
+      "color": "#B8955B",
       "layoutPosition": [
         -0.061742,
         0.0005,
@@ -1082,8 +1082,8 @@
       "partIds": [
         "sts3215_servo_horn_v1",
         "spur_gear_24_teeth",
-        "generic_base_sts3215_v2",
-        "sts3215_original_v1"
+        "sts3215_original_v1",
+        "generic_base_sts3215_v2"
       ],
       "dependencies": [
         "step_004"
@@ -1128,8 +1128,8 @@
       "name": "Assemble spacer_5xm3x15_v1_2",
       "partIds": [
         "spacer_5xm3x15_v1_2",
-        "generic_base_sts3215_v2",
-        "ring_gear_v1"
+        "ring_gear_v1",
+        "generic_base_sts3215_v2"
       ],
       "dependencies": [
         "step_006"
@@ -1174,8 +1174,8 @@
       "name": "Assemble spacer_5xm3x15_v1_3",
       "partIds": [
         "spacer_5xm3x15_v1_3",
-        "generic_base_sts3215_v2",
-        "ring_gear_v1"
+        "ring_gear_v1",
+        "generic_base_sts3215_v2"
       ],
       "dependencies": [
         "step_008"
@@ -1220,8 +1220,8 @@
       "name": "Assemble spacer_5xm3x15_v1_4",
       "partIds": [
         "spacer_5xm3x15_v1_4",
-        "generic_base_sts3215_v2",
-        "ring_gear_v1"
+        "ring_gear_v1",
+        "generic_base_sts3215_v2"
       ],
       "dependencies": [
         "step_010"
@@ -1266,8 +1266,8 @@
       "name": "Assemble spacer_5xm3x15_v1",
       "partIds": [
         "spacer_5xm3x15_v1",
-        "generic_base_sts3215_v2",
-        "ring_gear_v1"
+        "ring_gear_v1",
+        "generic_base_sts3215_v2"
       ],
       "dependencies": [
         "step_012"
@@ -1492,9 +1492,9 @@
       "name": "Assemble spur_gear_24_teeth",
       "partIds": [
         "spur_gear_24_teeth",
-        "sts3215_servo_horn_v1",
         "satellite_top_v3",
-        "bearing6704_v1"
+        "bearing6704_v1",
+        "sts3215_servo_horn_v1"
       ],
       "dependencies": [
         "step_022"
@@ -1540,8 +1540,8 @@
       "partIds": [
         "spur_gear_12_teeth_2",
         "mr63zz_bearing_v1_3",
-        "1mm_spacer_v1",
-        "ring_gear_v1"
+        "ring_gear_v1",
+        "1mm_spacer_v1"
       ],
       "dependencies": [
         "step_024"
@@ -1586,9 +1586,9 @@
       "name": "Assemble spur_gear_12_teeth_3",
       "partIds": [
         "spur_gear_12_teeth_3",
-        "1mm_spacer_v1_4",
         "mr63zz_bearing_v1",
-        "ring_gear_v1"
+        "ring_gear_v1",
+        "1mm_spacer_v1_4"
       ],
       "dependencies": [
         "step_026"
@@ -1633,8 +1633,8 @@
       "name": "Assemble spur_gear_12_teeth_4",
       "partIds": [
         "spur_gear_12_teeth_4",
-        "mr63zz_bearing_v1_2",
         "1mm_spacer_v1_2",
+        "mr63zz_bearing_v1_2",
         "ring_gear_v1"
       ],
       "dependencies": [
@@ -1681,8 +1681,8 @@
       "partIds": [
         "spur_gear_12_teeth",
         "mr63zz_bearing_v1_5",
-        "1mm_spacer_v1_3",
-        "ring_gear_v1"
+        "ring_gear_v1",
+        "1mm_spacer_v1_3"
       ],
       "dependencies": [
         "step_030"
@@ -2003,8 +2003,8 @@
       "name": "Assemble 1mm_spacer_v1_4",
       "partIds": [
         "1mm_spacer_v1_4",
-        "satellite_top_v3",
-        "spur_gear_12_teeth_3"
+        "spur_gear_12_teeth_3",
+        "satellite_top_v3"
       ],
       "dependencies": [
         "step_044"
@@ -2051,8 +2051,8 @@
       "name": "Assemble 1mm_spacer_v1",
       "partIds": [
         "1mm_spacer_v1",
-        "spur_gear_12_teeth_2",
-        "satellite_top_v3"
+        "satellite_top_v3",
+        "spur_gear_12_teeth_2"
       ],
       "dependencies": [
         "step_046"
@@ -2099,15 +2099,15 @@
       "name": "Assemble ring_gear_v1",
       "partIds": [
         "ring_gear_v1",
-        "6708_bearing_v1",
-        "spacer_5xm3x15_v1",
         "spur_gear_12_teeth",
-        "spacer_5xm3x15_v1_2",
-        "spacer_5xm3x15_v1_3",
+        "spur_gear_12_teeth_3",
         "spur_gear_12_teeth_4",
-        "spur_gear_12_teeth_2",
+        "spacer_5xm3x15_v1_2",
         "spacer_5xm3x15_v1_4",
-        "spur_gear_12_teeth_3"
+        "spacer_5xm3x15_v1_3",
+        "spacer_5xm3x15_v1",
+        "spur_gear_12_teeth_2",
+        "6708_bearing_v1"
       ],
       "dependencies": [
         "step_048"
@@ -2198,13 +2198,13 @@
       "name": "Assemble satellite_top_v3",
       "partIds": [
         "satellite_top_v3",
-        "6708_bearing_v1",
         "spur_gear_24_teeth",
         "1mm_spacer_v1_3",
-        "1mm_spacer_v1_4",
-        "1mm_spacer_v1",
+        "1mm_spacer_v1_2",
         "bearing6704_v1",
-        "1mm_spacer_v1_2"
+        "1mm_spacer_v1_4",
+        "6708_bearing_v1",
+        "1mm_spacer_v1"
       ],
       "dependencies": [
         "step_052"
@@ -2249,8 +2249,8 @@
       "name": "Assemble 6708_bearing_v1",
       "partIds": [
         "6708_bearing_v1",
-        "satellite_top_v3",
-        "ring_gear_v1"
+        "ring_gear_v1",
+        "satellite_top_v3"
       ],
       "dependencies": [
         "step_054"
@@ -2295,9 +2295,9 @@
       "name": "Assemble satellite_base_v1",
       "partIds": [
         "satellite_base_v1",
-        "mr63zz_bearing_v1_8",
         "mr63zz_bearing_v1_6",
         "mr63zz_bearing_v1_4",
+        "mr63zz_bearing_v1_8",
         "mr63zz_bearing_v1_7"
       ],
       "dependencies": [

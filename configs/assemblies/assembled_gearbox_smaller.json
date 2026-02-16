@@ -5,7 +5,7 @@
     "ring_gear_v1": {
       "id": "ring_gear_v1",
       "cadFile": null,
-      "meshFile": "/meshes/assembled_gearbox_smaller/ring_gear_v1.glb?v=1771190829",
+      "meshFile": "/meshes/assembled_gearbox_smaller/ring_gear_v1.glb?v=1771273243",
       "graspPoints": [],
       "position": [
         -0.003033,
@@ -39,7 +39,7 @@
     "6708_bearing_v1": {
       "id": "6708_bearing_v1",
       "cadFile": null,
-      "meshFile": "/meshes/assembled_gearbox_smaller/6708_bearing_v1.glb?v=1771190829",
+      "meshFile": "/meshes/assembled_gearbox_smaller/6708_bearing_v1.glb?v=1771273243",
       "graspPoints": [],
       "position": [
         -0.003033,
@@ -73,7 +73,7 @@
     "satellite_top_v1": {
       "id": "satellite_top_v1",
       "cadFile": null,
-      "meshFile": "/meshes/assembled_gearbox_smaller/satellite_top_v1.glb?v=1771190830",
+      "meshFile": "/meshes/assembled_gearbox_smaller/satellite_top_v1.glb?v=1771273243",
       "graspPoints": [],
       "position": [
         -0.003033,
@@ -107,7 +107,7 @@
     "spur_gear_12_teeth": {
       "id": "spur_gear_12_teeth",
       "cadFile": null,
-      "meshFile": "/meshes/assembled_gearbox_smaller/spur_gear_12_teeth.glb?v=1771190830",
+      "meshFile": "/meshes/assembled_gearbox_smaller/spur_gear_12_teeth.glb?v=1771273244",
       "graspPoints": [],
       "position": [
         0.013597,
@@ -141,7 +141,7 @@
     "spur_gear_12_teeth_2": {
       "id": "spur_gear_12_teeth_2",
       "cadFile": null,
-      "meshFile": "/meshes/assembled_gearbox_smaller/spur_gear_12_teeth_2.glb?v=1771190830",
+      "meshFile": "/meshes/assembled_gearbox_smaller/spur_gear_12_teeth_2.glb?v=1771273244",
       "graspPoints": [],
       "position": [
         -0.009921,
@@ -175,7 +175,7 @@
     "spur_gear_12_teeth_3": {
       "id": "spur_gear_12_teeth_3",
       "cadFile": null,
-      "meshFile": "/meshes/assembled_gearbox_smaller/spur_gear_12_teeth_3.glb?v=1771190830",
+      "meshFile": "/meshes/assembled_gearbox_smaller/spur_gear_12_teeth_3.glb?v=1771273244",
       "graspPoints": [],
       "position": [
         0.003855,
@@ -209,7 +209,7 @@
     "spur_gear_12_teeth_4": {
       "id": "spur_gear_12_teeth_4",
       "cadFile": null,
-      "meshFile": "/meshes/assembled_gearbox_smaller/spur_gear_12_teeth_4.glb?v=1771190830",
+      "meshFile": "/meshes/assembled_gearbox_smaller/spur_gear_12_teeth_4.glb?v=1771273244",
       "graspPoints": [],
       "position": [
         -0.019663,
@@ -243,7 +243,7 @@
     "satellite_base_v1": {
       "id": "satellite_base_v1",
       "cadFile": null,
-      "meshFile": "/meshes/assembled_gearbox_smaller/satellite_base_v1.glb?v=1771190832",
+      "meshFile": "/meshes/assembled_gearbox_smaller/satellite_base_v1.glb?v=1771273246",
       "graspPoints": [],
       "position": [
         -0.003033,
@@ -277,7 +277,7 @@
     "spur_gear_24_teeth": {
       "id": "spur_gear_24_teeth",
       "cadFile": null,
-      "meshFile": "/meshes/assembled_gearbox_smaller/spur_gear_24_teeth.glb?v=1771190833",
+      "meshFile": "/meshes/assembled_gearbox_smaller/spur_gear_24_teeth.glb?v=1771273247",
       "graspPoints": [],
       "position": [
         -0.003033,
@@ -315,11 +315,9 @@
         "ring_gear_v1"
       ],
       "dependencies": [],
-      "handler": "primitive",
-      "primitiveType": "place",
-      "primitiveParams": {
-        "part_id": "ring_gear_v1"
-      },
+      "handler": "policy",
+      "primitiveType": null,
+      "primitiveParams": null,
       "policyId": null,
       "successCriteria": {
         "type": "position",
@@ -341,7 +339,9 @@
       "handler": "primitive",
       "primitiveType": "pick",
       "primitiveParams": {
-        "part_id": "spur_gear_24_teeth"
+        "part_id": "spur_gear_24_teeth",
+        "grasp_index": 0,
+        "approach_height": 0.05
       },
       "policyId": null,
       "successCriteria": {
@@ -357,18 +357,26 @@
       "name": "Assemble spur_gear_24_teeth",
       "partIds": [
         "spur_gear_24_teeth",
+        "spur_gear_12_teeth",
         "spur_gear_12_teeth_3",
         "spur_gear_12_teeth_4",
         "satellite_top_v1",
-        "spur_gear_12_teeth",
         "spur_gear_12_teeth_2"
       ],
       "dependencies": [
         "step_002"
       ],
-      "handler": "policy",
-      "primitiveType": null,
-      "primitiveParams": null,
+      "handler": "primitive",
+      "primitiveType": "place",
+      "primitiveParams": {
+        "target_pose": [
+          -0.003,
+          0.0332,
+          -0.0002
+        ],
+        "approach_height": 0.05,
+        "release_force": 0.2
+      },
       "policyId": null,
       "successCriteria": {
         "type": "classifier",
@@ -390,7 +398,9 @@
       "handler": "primitive",
       "primitiveType": "pick",
       "primitiveParams": {
-        "part_id": "spur_gear_12_teeth_2"
+        "part_id": "spur_gear_12_teeth_2",
+        "grasp_index": 0,
+        "approach_height": 0.05
       },
       "policyId": null,
       "successCriteria": {
@@ -407,8 +417,8 @@
       "partIds": [
         "spur_gear_12_teeth_2",
         "spur_gear_24_teeth",
-        "ring_gear_v1",
-        "satellite_top_v1"
+        "satellite_top_v1",
+        "ring_gear_v1"
       ],
       "dependencies": [
         "step_004"
@@ -437,7 +447,9 @@
       "handler": "primitive",
       "primitiveType": "pick",
       "primitiveParams": {
-        "part_id": "spur_gear_12_teeth_3"
+        "part_id": "spur_gear_12_teeth_3",
+        "grasp_index": 0,
+        "approach_height": 0.05
       },
       "policyId": null,
       "successCriteria": {
@@ -454,8 +466,8 @@
       "partIds": [
         "spur_gear_12_teeth_3",
         "spur_gear_24_teeth",
-        "ring_gear_v1",
-        "satellite_top_v1"
+        "satellite_top_v1",
+        "ring_gear_v1"
       ],
       "dependencies": [
         "step_006"
@@ -484,7 +496,9 @@
       "handler": "primitive",
       "primitiveType": "pick",
       "primitiveParams": {
-        "part_id": "spur_gear_12_teeth_4"
+        "part_id": "spur_gear_12_teeth_4",
+        "grasp_index": 0,
+        "approach_height": 0.05
       },
       "policyId": null,
       "successCriteria": {
@@ -501,8 +515,8 @@
       "partIds": [
         "spur_gear_12_teeth_4",
         "spur_gear_24_teeth",
-        "ring_gear_v1",
-        "satellite_top_v1"
+        "satellite_top_v1",
+        "ring_gear_v1"
       ],
       "dependencies": [
         "step_008"
@@ -531,7 +545,9 @@
       "handler": "primitive",
       "primitiveType": "pick",
       "primitiveParams": {
-        "part_id": "spur_gear_12_teeth"
+        "part_id": "spur_gear_12_teeth",
+        "grasp_index": 0,
+        "approach_height": 0.05
       },
       "policyId": null,
       "successCriteria": {
@@ -548,8 +564,8 @@
       "partIds": [
         "spur_gear_12_teeth",
         "spur_gear_24_teeth",
-        "ring_gear_v1",
-        "satellite_top_v1"
+        "satellite_top_v1",
+        "ring_gear_v1"
       ],
       "dependencies": [
         "step_010"
@@ -578,7 +594,9 @@
       "handler": "primitive",
       "primitiveType": "pick",
       "primitiveParams": {
-        "part_id": "satellite_top_v1"
+        "part_id": "satellite_top_v1",
+        "grasp_index": 0,
+        "approach_height": 0.05
       },
       "policyId": null,
       "successCriteria": {
@@ -594,12 +612,12 @@
       "name": "Assemble satellite_top_v1",
       "partIds": [
         "satellite_top_v1",
-        "6708_bearing_v1",
+        "spur_gear_12_teeth",
         "spur_gear_12_teeth_3",
         "spur_gear_12_teeth_4",
         "spur_gear_24_teeth",
-        "spur_gear_12_teeth",
-        "spur_gear_12_teeth_2"
+        "spur_gear_12_teeth_2",
+        "6708_bearing_v1"
       ],
       "dependencies": [
         "step_012"
@@ -628,7 +646,9 @@
       "handler": "primitive",
       "primitiveType": "pick",
       "primitiveParams": {
-        "part_id": "6708_bearing_v1"
+        "part_id": "6708_bearing_v1",
+        "grasp_index": 0,
+        "approach_height": 0.05
       },
       "policyId": null,
       "successCriteria": {
@@ -644,8 +664,8 @@
       "name": "Assemble 6708_bearing_v1",
       "partIds": [
         "6708_bearing_v1",
-        "ring_gear_v1",
-        "satellite_top_v1"
+        "satellite_top_v1",
+        "ring_gear_v1"
       ],
       "dependencies": [
         "step_014"
@@ -674,7 +694,9 @@
       "handler": "primitive",
       "primitiveType": "pick",
       "primitiveParams": {
-        "part_id": "satellite_base_v1"
+        "part_id": "satellite_base_v1",
+        "grasp_index": 0,
+        "approach_height": 0.05
       },
       "policyId": null,
       "successCriteria": {
@@ -697,7 +719,13 @@
       "handler": "primitive",
       "primitiveType": "place",
       "primitiveParams": {
-        "part_id": "satellite_base_v1"
+        "target_pose": [
+          -0.003,
+          0.0267,
+          -0.0002
+        ],
+        "approach_height": 0.05,
+        "release_force": 0.2
       },
       "policyId": null,
       "successCriteria": {
