@@ -188,3 +188,160 @@ def test_start_execution(isolated_app: TestClient) -> None:
     r2 = isolated_app.get("/execution/state")
     assert r2.json()["phase"] in ("running", "complete")
     assert r2.json()["assemblyId"] == "test_assembly"
+
+
+# ------------------------------------------------------------------
+# Upload pipeline
+# ------------------------------------------------------------------
+
+
+def _mock_parse_result():
+    """Build a canned ParseResult for upload pipeline tests."""
+    from dataclasses import dataclass
+    from dataclasses import field as dc_field
+
+    from nextis.assembly.models import (
+        AssemblyGraph,
+        ContactInfo,
+        ContactType,
+        Part,
+    )
+
+    graph = AssemblyGraph(
+        id="uploaded_asm",
+        name="Uploaded Assembly",
+        parts={
+            "base": Part(
+                id="base",
+                geometry="box",
+                dimensions=[0.08, 0.04, 0.06],
+                position=[0.0, 0.02, 0.0],
+            ),
+            "shaft": Part(
+                id="shaft",
+                geometry="cylinder",
+                dimensions=[0.015, 0.10],
+                position=[0.0, 0.05, 0.0],
+                shape_class="shaft",
+            ),
+        },
+    )
+    contacts = [
+        ContactInfo(
+            part_a="base",
+            part_b="shaft",
+            contact_type=ContactType.COAXIAL,
+            clearance_mm=0.3,
+        ),
+    ]
+
+    @dataclass
+    class FakeParseResult:
+        graph: AssemblyGraph
+        contacts: list = dc_field(default_factory=list)
+        units: str = "m"
+        unit_scale: float = 1.0
+
+    return FakeParseResult(graph=graph, contacts=contacts)
+
+
+def _mock_plan(parse_result):
+    """Fake SequencePlanner.plan() that adds minimal steps."""
+    from nextis.assembly.models import AssemblyStep, SuccessCriteria
+
+    graph = parse_result.graph
+    graph.steps = {
+        "step_001": AssemblyStep(
+            id="step_001",
+            name="Place base",
+            part_ids=["base"],
+            handler="primitive",
+            primitive_type="place",
+            primitive_params={"target_pose": [0.0, 0.02, 0.0]},
+            success_criteria=SuccessCriteria(type="position"),
+        ),
+    }
+    graph.step_order = ["step_001"]
+    return graph
+
+
+def test_upload_without_api_key(
+    isolated_app: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Upload flow works and produces valid assembly without ANTHROPIC_API_KEY."""
+    import nextis.api.routes.assembly as asm_mod
+
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(asm_mod, "HAS_PARSER", True)
+
+    # Mock CADParser and SequencePlanner
+    class FakeParser:
+        def parse(self, *args, **kwargs):
+            return _mock_parse_result()
+
+    class FakePlanner:
+        def plan(self, parse_result):
+            return _mock_plan(parse_result)
+
+    monkeypatch.setattr(asm_mod, "CADParser", FakeParser)
+    monkeypatch.setattr(asm_mod, "SequencePlanner", FakePlanner)
+
+    # Create a fake STEP file
+    step_file = tmp_path / "test_part.step"
+    step_file.write_text("ISO-10303-21;\nHEADER;\nENDSEC;\nDATA;\nENDSEC;\nEND-ISO-10303-21;")
+
+    with open(step_file, "rb") as f:
+        r = isolated_app.post(
+            "/assemblies/upload",
+            files={"file": ("test_part.step", f, "application/octet-stream")},
+        )
+
+    assert r.status_code == 200
+
+    # Parse NDJSON lines
+    lines = [json.loads(line) for line in r.text.strip().split("\n") if line.strip()]
+    assert any(msg["type"] == "complete" for msg in lines), f"No complete event in {lines}"
+
+    complete_msg = next(msg for msg in lines if msg["type"] == "complete")
+    assert "assembly" in complete_msg
+    assert complete_msg["assembly"]["id"] == "uploaded_asm"
+
+
+def test_upload_progress_includes_ai_stage(
+    isolated_app: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """NDJSON stream includes ai_analysis stage (skipped without API key)."""
+    import nextis.api.routes.assembly as asm_mod
+
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(asm_mod, "HAS_PARSER", True)
+
+    class FakeParser:
+        def parse(self, *args, **kwargs):
+            return _mock_parse_result()
+
+    class FakePlanner:
+        def plan(self, parse_result):
+            return _mock_plan(parse_result)
+
+    monkeypatch.setattr(asm_mod, "CADParser", FakeParser)
+    monkeypatch.setattr(asm_mod, "SequencePlanner", FakePlanner)
+
+    step_file = tmp_path / "test_part.step"
+    step_file.write_text("ISO-10303-21;\nHEADER;\nENDSEC;\nDATA;\nENDSEC;\nEND-ISO-10303-21;")
+
+    with open(step_file, "rb") as f:
+        r = isolated_app.post(
+            "/assemblies/upload",
+            files={"file": ("test_part.step", f, "application/octet-stream")},
+        )
+
+    assert r.status_code == 200
+
+    lines = [json.loads(line) for line in r.text.strip().split("\n") if line.strip()]
+    stages = [msg.get("stage") for msg in lines if msg.get("type") == "progress"]
+    assert "ai_analysis" in stages, f"ai_analysis stage missing from {stages}"

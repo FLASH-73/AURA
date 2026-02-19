@@ -10,6 +10,7 @@ import asyncio
 import contextlib
 import json
 import logging
+import os
 import queue as queue_mod
 import shutil
 import tempfile
@@ -37,6 +38,7 @@ router = APIRouter()
 
 CONFIGS_DIR = Path(__file__).resolve().parents[3] / "configs" / "assemblies"
 MESHES_DIR = Path(__file__).resolve().parents[3] / "data" / "meshes"
+OVERRIDES_DIR = Path(__file__).resolve().parents[3] / "configs" / "overrides"
 
 
 def _find_assembly_path(assembly_id: str) -> Path:
@@ -133,6 +135,14 @@ async def update_step(
     path = CONFIGS_DIR / f"{assembly_id}.json"
     graph.to_json_file(path)
     logger.info("Updated step %s in assembly %s", step_id, assembly_id)
+
+    # Capture as persistent override for re-upload survival
+    from nextis.assembly.overrides import OverrideStore
+
+    OverrideStore(OVERRIDES_DIR).capture_step_override(
+        assembly_id, graph.steps[step_id], source="user"
+    )
+
     return {"status": "updated"}
 
 
@@ -173,159 +183,18 @@ async def delete_assembly(assembly_id: str) -> dict[str, str]:
     if mesh_dir.is_dir():
         shutil.rmtree(mesh_dir)
 
+    # Clean up override file
+    from nextis.assembly.overrides import OverrideStore
+
+    OverrideStore(OVERRIDES_DIR).delete(assembly_id)
+
     logger.info("Deleted assembly %s", assembly_id)
     return {"status": "deleted", "id": assembly_id}
 
 
-@router.post("/upload", status_code=200)
-async def upload_step_file(file: UploadFile = File(...)):  # noqa: B008
-    """Parse a STEP file and stream progress as NDJSON.
-
-    Accepts a multipart form upload of a .step/.stp file. Streams progress
-    events as newline-delimited JSON, ending with a ``complete`` event that
-    contains the full AssemblyGraph or an ``error`` event on failure.
-
-    Args:
-        file: Uploaded STEP file (.step or .stp).
-    """
-    if not HAS_PARSER:
-        raise HTTPException(
-            status_code=400,
-            detail="CAD parsing unavailable. Install pythonocc-core via conda.",
-        )
-
-    filename = file.filename or "unknown.step"
-    suffix = Path(filename).suffix.lower()
-    if suffix not in {".step", ".stp"}:
-        raise HTTPException(status_code=400, detail=f"Expected .step/.stp file, got '{suffix}'")
-
-    # Save upload to temp dir, preserving original filename so the parser
-    # derives the correct assembly_id from the file stem.
-    tmp_dir = Path(tempfile.mkdtemp())
-    tmp_path = tmp_dir / filename
-    with open(tmp_path, "wb") as f:
-        shutil.copyfileobj(file.file, f)
-
-    progress_queue: queue_mod.SimpleQueue = queue_mod.SimpleQueue()
-
-    def run_pipeline() -> None:
-        """Synchronous pipeline — runs in thread pool."""
-
-        def emit(progress: float, stage: str, detail: str) -> None:
-            progress_queue.put(
-                {
-                    "type": "progress",
-                    "stage": stage,
-                    "detail": detail,
-                    "progress": round(progress, 3),
-                }
-            )
-
-        try:
-            parser = CADParser()
-            mesh_dir = MESHES_DIR / tmp_path.stem.lower().replace(" ", "_").replace("-", "_")
-
-            emit(0.01, "reading", f"Uploading {filename}...")
-            parse_result = parser.parse(
-                tmp_path,
-                mesh_dir,
-                assembly_name=tmp_path.stem,
-                on_progress=emit,
-            )
-
-            emit(0.88, "planning", "Planning assembly sequence...")
-            planner = SequencePlanner()
-            graph = planner.plan(parse_result)
-
-            from nextis.assembly.sequence_planner import assign_handlers
-
-            graph = assign_handlers(graph)
-
-            emit(0.95, "saving", "Saving assembly...")
-            json_path = CONFIGS_DIR / f"{graph.id}.json"
-            graph.to_json_file(json_path)
-            logger.info("Created assembly '%s' from uploaded STEP file", graph.id)
-
-            result = graph.model_dump(by_alias=True)
-            progress_queue.put({"type": "complete", "assembly": result})
-
-        except CADParseError as e:
-            progress_queue.put({"type": "error", "detail": str(e)})
-        except Exception as e:
-            logger.error("STEP upload failed: %s", e, exc_info=True)
-            progress_queue.put({"type": "error", "detail": "Internal parsing error"})
-        finally:
-            shutil.rmtree(tmp_dir, ignore_errors=True)
-
-    async def event_stream():
-        """Async generator yielding NDJSON lines from the progress queue."""
-        loop = asyncio.get_event_loop()
-        task = loop.run_in_executor(None, run_pipeline)
-        while True:
-            try:
-                msg = await asyncio.to_thread(progress_queue.get, timeout=0.15)
-            except Exception:
-                # queue.get timed out — check if pipeline thread finished
-                if task.done():
-                    break
-                continue
-            yield json.dumps(msg, separators=(",", ":")) + "\n"
-            if msg["type"] in ("complete", "error"):
-                break
-        await task  # ensure thread cleanup
-
-    return StreamingResponse(event_stream(), media_type="application/x-ndjson")
-
-
-@router.post("/{assembly_id}/analyze", response_model=PlanAnalysisResponse)
-async def analyze_assembly(
-    assembly_id: str,
-    apply: bool = False,
-) -> PlanAnalysisResponse:
-    """Run AI analysis on an assembly plan.
-
-    Sends the assembly graph to Claude for review and returns suggested
-    improvements to step ordering, handler selection, and parameters.
-
-    Args:
-        assembly_id: The assembly to analyze.
-        apply: If True, automatically apply safe suggestions and save.
-    """
-    graph = _load_assembly(assembly_id)
-
-    try:
-        from nextis.assembly.ai_planner import AIPlanner
-
-        planner = AIPlanner()
-        analysis = await planner.analyze(graph)
-    except PlannerError as e:
-        if "not set" in str(e) or "not installed" in str(e):
-            raise HTTPException(status_code=503, detail=str(e)) from e
-        raise HTTPException(status_code=422, detail=str(e)) from e
-
-    if apply and analysis.suggestions:
-        _apply_suggestions(graph, analysis.suggestions)
-        path = CONFIGS_DIR / f"{assembly_id}.json"
-        graph.to_json_file(path)
-        logger.info("Applied %d AI suggestions to %s", len(analysis.suggestions), assembly_id)
-
-    return PlanAnalysisResponse(
-        suggestions=[
-            PlanSuggestionResponse(
-                step_id=s.step_id,
-                field=s.field,
-                old_value=s.old_value,
-                new_value=s.new_value,
-                reason=s.reason,
-            )
-            for s in analysis.suggestions
-        ],
-        warnings=analysis.warnings,
-        difficulty_score=analysis.difficulty_score,
-        estimated_teaching_minutes=analysis.estimated_teaching_minutes,
-        summary=analysis.summary,
-    )
-
+# ---------------------------------------------------------------------------
+# AI suggestion helpers (used by both upload pipeline and analyze endpoint)
+# ---------------------------------------------------------------------------
 
 _VALID_PRIMITIVE_TYPES = {
     "move_to",
@@ -419,3 +288,241 @@ def _apply_suggestions(
 
         setattr(step, attr, value)
         logger.info("Applied: %s.%s: %s -> %s", s.step_id, attr, current, value)
+
+
+@router.post("/upload", status_code=200)
+async def upload_step_file(file: UploadFile = File(...)):  # noqa: B008
+    """Parse a STEP file and stream progress as NDJSON.
+
+    Accepts a multipart form upload of a .step/.stp file. Streams progress
+    events as newline-delimited JSON, ending with a ``complete`` event that
+    contains the full AssemblyGraph or an ``error`` event on failure.
+
+    Args:
+        file: Uploaded STEP file (.step or .stp).
+    """
+    if not HAS_PARSER:
+        raise HTTPException(
+            status_code=400,
+            detail="CAD parsing unavailable. Install pythonocc-core via conda.",
+        )
+
+    filename = file.filename or "unknown.step"
+    suffix = Path(filename).suffix.lower()
+    if suffix not in {".step", ".stp"}:
+        raise HTTPException(status_code=400, detail=f"Expected .step/.stp file, got '{suffix}'")
+
+    # Save upload to temp dir, preserving original filename so the parser
+    # derives the correct assembly_id from the file stem.
+    tmp_dir = Path(tempfile.mkdtemp())
+    tmp_path = tmp_dir / filename
+    with open(tmp_path, "wb") as f:
+        shutil.copyfileobj(file.file, f)
+
+    progress_queue: queue_mod.SimpleQueue = queue_mod.SimpleQueue()
+
+    def run_pipeline() -> None:
+        """Synchronous pipeline — runs in thread pool."""
+
+        def emit(progress: float, stage: str, detail: str) -> None:
+            progress_queue.put(
+                {
+                    "type": "progress",
+                    "stage": stage,
+                    "detail": detail,
+                    "progress": round(progress, 3),
+                }
+            )
+
+        try:
+            parser = CADParser()
+            mesh_dir = MESHES_DIR / tmp_path.stem.lower().replace(" ", "_").replace("-", "_")
+
+            emit(0.01, "reading", f"Uploading {filename}...")
+            parse_result = parser.parse(
+                tmp_path,
+                mesh_dir,
+                assembly_name=tmp_path.stem,
+                on_progress=emit,
+            )
+
+            emit(0.88, "planning", "Planning assembly sequence...")
+            seq_planner = SequencePlanner()
+            graph = seq_planner.plan(parse_result)
+            graph.contacts = parse_result.contacts
+
+            # --- AI analysis (optional — requires ANTHROPIC_API_KEY) ---
+            api_key = os.environ.get("ANTHROPIC_API_KEY")
+            if api_key:
+                emit(0.90, "ai_analysis", "Running AI plan analysis...")
+                try:
+                    from nextis.assembly.ai_planner import AIPlanner
+
+                    ai_planner = AIPlanner(api_key=api_key)
+                    analysis = ai_planner.analyze_sync(graph)
+
+                    if analysis.suggestions:
+                        _apply_suggestions(graph, analysis.suggestions)
+                        emit(
+                            0.93,
+                            "ai_analysis",
+                            f"Applied {len(analysis.suggestions)} AI suggestions",
+                        )
+                        logger.info(
+                            "AI analysis applied %d suggestions to %s",
+                            len(analysis.suggestions),
+                            graph.id,
+                        )
+                    else:
+                        emit(0.93, "ai_analysis", "AI analysis: no changes suggested")
+                except Exception as e:
+                    logger.warning("AI analysis failed (non-fatal): %s", e)
+                    emit(0.93, "ai_analysis", "AI analysis skipped (error)")
+            else:
+                emit(0.90, "ai_analysis", "AI analysis skipped (no API key)")
+
+            # --- Re-apply saved overrides (survives re-upload) ---
+            from nextis.assembly.overrides import OverrideStore
+
+            override_store = OverrideStore(OVERRIDES_DIR)
+            existing_overrides = override_store.load(graph.id)
+            if existing_overrides and existing_overrides.overrides:
+                count = override_store.apply_to_graph(graph, existing_overrides)
+                emit(0.94, "overrides", f"Re-applied {count} saved overrides")
+                logger.info("Applied %d overrides to %s", count, graph.id)
+            else:
+                emit(0.94, "overrides", "No saved overrides found")
+
+            emit(0.95, "saving", "Saving assembly...")
+            json_path = CONFIGS_DIR / f"{graph.id}.json"
+            graph.to_json_file(json_path)
+            logger.info("Created assembly '%s' from uploaded STEP file", graph.id)
+
+            result = graph.model_dump(by_alias=True)
+            progress_queue.put({"type": "complete", "assembly": result})
+
+        except CADParseError as e:
+            progress_queue.put({"type": "error", "detail": str(e)})
+        except Exception as e:
+            logger.error("STEP upload failed: %s", e, exc_info=True)
+            progress_queue.put({"type": "error", "detail": "Internal parsing error"})
+        finally:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    async def event_stream():
+        """Async generator yielding NDJSON lines from the progress queue."""
+        loop = asyncio.get_event_loop()
+        task = loop.run_in_executor(None, run_pipeline)
+        while True:
+            try:
+                msg = await asyncio.to_thread(progress_queue.get, timeout=0.15)
+            except Exception:
+                # queue.get timed out — check if pipeline thread finished
+                if task.done():
+                    break
+                continue
+            yield json.dumps(msg, separators=(",", ":")) + "\n"
+            if msg["type"] in ("complete", "error"):
+                break
+        await task  # ensure thread cleanup
+
+    return StreamingResponse(event_stream(), media_type="application/x-ndjson")
+
+
+@router.post("/{assembly_id}/analyze", response_model=PlanAnalysisResponse)
+async def analyze_assembly(
+    assembly_id: str,
+    apply: bool = False,
+) -> PlanAnalysisResponse:
+    """Run AI analysis on an assembly plan.
+
+    Sends the assembly graph to Claude for review and returns suggested
+    improvements to step ordering, handler selection, and parameters.
+
+    Args:
+        assembly_id: The assembly to analyze.
+        apply: If True, automatically apply safe suggestions and save.
+    """
+    graph = _load_assembly(assembly_id)
+
+    try:
+        from nextis.assembly.ai_planner import AIPlanner
+
+        planner = AIPlanner()
+        analysis = await planner.analyze(graph)
+    except PlannerError as e:
+        if "not set" in str(e) or "not installed" in str(e):
+            raise HTTPException(status_code=503, detail=str(e)) from e
+        raise HTTPException(status_code=422, detail=str(e)) from e
+
+    if apply and analysis.suggestions:
+        _apply_suggestions(graph, analysis.suggestions)
+        path = CONFIGS_DIR / f"{assembly_id}.json"
+        graph.to_json_file(path)
+        logger.info("Applied %d AI suggestions to %s", len(analysis.suggestions), assembly_id)
+
+        # Capture AI-modified steps as overrides
+        from nextis.assembly.overrides import OverrideStore
+
+        store = OverrideStore(OVERRIDES_DIR)
+        for sid in {s.step_id for s in analysis.suggestions}:
+            if sid in graph.steps:
+                store.capture_step_override(assembly_id, graph.steps[sid], source="ai")
+
+    return PlanAnalysisResponse(
+        suggestions=[
+            PlanSuggestionResponse(
+                step_id=s.step_id,
+                field=s.field,
+                old_value=s.old_value,
+                new_value=s.new_value,
+                reason=s.reason,
+            )
+            for s in analysis.suggestions
+        ],
+        warnings=analysis.warnings,
+        difficulty_score=analysis.difficulty_score,
+        estimated_teaching_minutes=analysis.estimated_teaching_minutes,
+        summary=analysis.summary,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Override management endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{assembly_id}/overrides")
+async def list_overrides(assembly_id: str) -> dict[str, Any]:
+    """List all saved overrides for an assembly."""
+    _find_assembly_path(assembly_id)  # verify assembly exists
+    from nextis.assembly.overrides import OverrideStore
+
+    store = OverrideStore(OVERRIDES_DIR)
+    overrides = store.load(assembly_id)
+    if overrides is None:
+        return {"assemblyId": assembly_id, "overrides": []}
+    return overrides.model_dump(by_alias=True)
+
+
+@router.delete("/{assembly_id}/overrides")
+async def clear_overrides(assembly_id: str) -> dict[str, str]:
+    """Delete all overrides for an assembly."""
+    from nextis.assembly.overrides import OverrideStore
+
+    deleted = OverrideStore(OVERRIDES_DIR).delete(assembly_id)
+    return {"status": "deleted" if deleted else "not_found"}
+
+
+@router.delete("/{assembly_id}/overrides/{index}")
+async def delete_override(assembly_id: str, index: int) -> dict[str, str]:
+    """Delete a specific override by index."""
+    from nextis.assembly.overrides import OverrideStore
+
+    store = OverrideStore(OVERRIDES_DIR)
+    overrides = store.load(assembly_id)
+    if overrides is None or index < 0 or index >= len(overrides.overrides):
+        raise HTTPException(status_code=404, detail="Override not found")
+    overrides.overrides.pop(index)
+    store.save(overrides)
+    return {"status": "deleted"}

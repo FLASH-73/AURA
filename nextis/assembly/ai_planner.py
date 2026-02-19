@@ -65,6 +65,22 @@ Use "policy" (learned from human demonstrations) when:
 - Guarded move: 2-8 Nm for surface contact detection
 - Screw torque: 0.5-3 Nm (M3 ~0.5, M5 ~2.0)
 
+## Contact Types
+The spatial summary includes contact analysis between parts:
+- "coaxial": shaft-in-hole contact. Use clearance to decide handler:
+  - clearance < 0.5mm → handler="policy" (needs teaching)
+  - clearance >= 0.5mm → handler="primitive", primitiveType="linear_insert"
+- "planar": flat surfaces stacking. Usually handler="primitive", primitiveType="place"
+- "complex": multiple contact faces, potentially gear meshing. Usually handler="policy"
+- "point"/"line": simple contact, usually handler="primitive"
+
+## Shape Classes
+Parts may have a shape_class from face analysis:
+- "shaft": elongated cylindrical part → likely inserted into a housing
+- "housing": part with cylindrical bore → receptacle for shafts/bearings
+- "gear_like": disc with many small faces → gear, needs policy handler
+- "plate"/"block": simple geometric parts → usually primitive handlers
+
 ## Coordinate Convention
 - All primitiveParams positions are in METRES.
 - The spatial summary shows millimetres for readability.
@@ -153,15 +169,22 @@ def _spatial_summary(graph: AssemblyGraph) -> str:
     )
 
     lines.append(f"## Part Catalog ({len(graph.parts)} parts)")
-    lines.append("| ID | Geometry | Dimensions (mm) | Position (mm) | Volume (mm3) |")
-    lines.append("|----|----------|-----------------|---------------|-------------|")
+    lines.append(
+        "| ID | Geometry | Shape Class | Dimensions (mm) "
+        "| Position (mm) | Volume (mm3) |"
+    )
+    lines.append(
+        "|----|----------|-------------|-----------------|"
+        "---------------|-------------|"
+    )
 
     for p in parts_sorted:
         pos = p.position or [0.0, 0.0, 0.0]
         vol_mm3 = _estimate_volume(p) * 1e9
         pos_mm = tuple(round(v * 1000, 1) for v in pos)
         lines.append(
-            f"| {p.id} | {p.geometry or 'unknown'} | {_format_dims_mm(p)} "
+            f"| {p.id} | {p.geometry or 'unknown'} | {p.shape_class or '-'} "
+            f"| {_format_dims_mm(p)} "
             f"| ({pos_mm[0]}, {pos_mm[1]}, {pos_mm[2]}) | {vol_mm3:,.0f} |"
         )
 
@@ -197,6 +220,21 @@ def _spatial_summary(graph: AssemblyGraph) -> str:
             lines.append(f"- {a} <-> {b}: {d:.1f}mm ({label})")
     else:
         lines.append("- No parts within 20mm of each other")
+
+    # --- Contact Details ---
+    if graph.contacts:
+        lines.append("")
+        lines.append("## Contact Details")
+        for c in graph.contacts:
+            desc = f"- {c.part_a} <-> {c.part_b}: {c.contact_type.value}"
+            if c.clearance_mm is not None:
+                desc += f", clearance {c.clearance_mm:.1f}mm"
+            if c.insertion_axis:
+                axis_str = ", ".join(f"{v:.2f}" for v in c.insertion_axis)
+                desc += f", insertion axis [{axis_str}]"
+            if c.area_class:
+                desc += f", {c.area_class} contact area"
+            lines.append(desc)
 
     # --- Step Table ---
     lines.append("")
@@ -303,6 +341,57 @@ class AIPlanner:
         raw_text = message.content[0].text
         logger.info(
             "AI analysis complete for %s (%d chars response)",
+            graph.id,
+            len(raw_text),
+        )
+        return self._parse_response(raw_text)
+
+    def analyze_sync(self, graph: AssemblyGraph) -> PlanAnalysis:
+        """Synchronous version of analyze() for use in thread pools.
+
+        Uses the synchronous Anthropic client to avoid nested event loops
+        when called from ``loop.run_in_executor()``.
+
+        Args:
+            graph: The assembly graph to analyze.
+
+        Returns:
+            PlanAnalysis with suggestions, warnings, and metadata.
+
+        Raises:
+            PlannerError: If the API key is missing, API call fails,
+                or response cannot be parsed.
+        """
+        if not self._api_key:
+            raise PlannerError(
+                "ANTHROPIC_API_KEY not set. Configure it in the environment "
+                "or pass api_key to AIPlanner."
+            )
+
+        try:
+            from anthropic import Anthropic
+        except ImportError as e:
+            raise PlannerError(
+                "anthropic package not installed. Run: pip install anthropic"
+            ) from e
+
+        prompt = self._build_prompt(graph)
+
+        try:
+            client = Anthropic(api_key=self._api_key)
+            message = client.messages.create(
+                model=self._model,
+                max_tokens=4096,
+                system=_SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": prompt}],
+            )
+        except Exception as e:
+            logger.error("Anthropic API call failed: %s", e)
+            raise PlannerError(f"AI analysis failed: {e}") from e
+
+        raw_text = message.content[0].text
+        logger.info(
+            "AI sync analysis complete for %s (%d chars response)",
             graph.id,
             len(raw_text),
         )
