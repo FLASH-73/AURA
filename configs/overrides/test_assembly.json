@@ -1,0 +1,33 @@
+{
+  "assemblyId": "test_assembly",
+  "overrides": [
+    {
+      "matchPattern": "Updated pick",
+      "matchPartIds": [
+        "part_a"
+      ],
+      "handler": "primitive",
+      "primitiveType": "pick",
+      "primitiveParams": {
+        "grasp_pose": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "successCriteria": {
+        "type": "force_threshold",
+        "threshold": 0.5,
+        "model": null,
+        "pattern": null
+      },
+      "maxRetries": 1,
+      "policyId": null,
+      "source": "user",
+      "createdAt": "2026-02-19T09:54:49.344973+00:00"
+    }
+  ]
+}

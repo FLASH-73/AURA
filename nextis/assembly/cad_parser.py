@@ -19,15 +19,17 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from nextis.assembly.contact_analysis import detect_contacts
 from nextis.assembly.mesh_utils import (
     classify_geometry,
+    classify_shape_from_faces,
     color_for_part,
     compute_bounding_box,
     compute_resting_rotation,
     tessellate_to_glb,
     trsf_to_pos_rot,
 )
-from nextis.assembly.models import AssemblyGraph, Part
+from nextis.assembly.models import AssemblyGraph, ContactInfo, Part
 from nextis.errors import CADParseError
 
 logger = logging.getLogger(__name__)
@@ -39,7 +41,6 @@ ProgressCallback = Callable[[float, str, str], None]
 # Optional OCC imports — try OCP (pip) first, then OCC.Core (conda)
 # ---------------------------------------------------------------------------
 try:
-    from OCP.BRepExtrema import BRepExtrema_DistShapeShape
     from OCP.gp import gp_Trsf
     from OCP.IFSelect import IFSelect_RetDone
     from OCP.Quantity import Quantity_Color, Quantity_TOC_RGB
@@ -58,7 +59,6 @@ try:
     HAS_OCC = True
 except ImportError:
     try:
-        from OCC.Core.BRepExtrema import BRepExtrema_DistShapeShape
         from OCC.Core.gp import gp_Trsf
         from OCC.Core.IFSelect import IFSelect_RetDone
         from OCC.Core.Quantity import Quantity_Color, Quantity_TOC_RGB
@@ -126,13 +126,13 @@ class ParseResult:
 
     Attributes:
         graph: Assembly graph with parts populated (steps empty).
-        contacts: Pairs of part IDs detected to be in contact.
+        contacts: Enriched contact info for detected inter-part contacts.
         units: Detected source units from the STEP file ("mm" or "m").
         unit_scale: Factor applied to convert source units to metres.
     """
 
     graph: AssemblyGraph
-    contacts: list[tuple[str, str]]
+    contacts: list[ContactInfo]
     units: str = "m"
     unit_scale: float = 1.0
 
@@ -265,10 +265,10 @@ class CADParser:
             part = self._process_part(rp, i, assembly_id, output_dir, unit_scale=unit_scale)
             parts[part.id] = part
 
-        # Detect contacts (operates on raw OCC shapes, unaffected by scaling)
+        # Detect contacts with enriched geometric classification
         if on_progress:
             on_progress(0.75, "contacts", f"Detecting contacts ({n * (n - 1) // 2} pairs)...")
-        contacts = self._detect_contacts(raw_parts)
+        contacts = detect_contacts(raw_parts, self._contact_tolerance, unit_scale)
 
         graph = AssemblyGraph(id=assembly_id, name=name, parts=parts, unit_scale=unit_scale)
 
@@ -367,7 +367,10 @@ class CADParser:
             _st_call(shape_tool, "GetComponents", label, components)
             for i in range(components.Length()):
                 self._walk_label(
-                    shape_tool, components.Value(i + 1), out, composed,
+                    shape_tool,
+                    components.Value(i + 1),
+                    out,
+                    composed,
                     color_tool=color_tool,
                 )
             return
@@ -384,7 +387,10 @@ class CADParser:
             _st_call(shape_tool, "GetComponents", actual_label, components)
             for i in range(components.Length()):
                 self._walk_label(
-                    shape_tool, components.Value(i + 1), out, composed,
+                    shape_tool,
+                    components.Value(i + 1),
+                    out,
+                    composed,
                     color_tool=color_tool,
                 )
             return
@@ -537,6 +543,15 @@ class CADParser:
         layout_rot = compute_resting_rotation(rp.shape)
 
         geo_type, dims = classify_geometry(extents[0], extents[1], extents[2])
+
+        # Enhanced classification from face analysis (optional, may fail on degenerate shapes)
+        shape_class: str | None = None
+        face_stats: dict[str, float] | None = None
+        try:
+            shape_class, face_stats = classify_shape_from_faces(rp.shape)
+        except Exception as exc:
+            logger.debug("Face classification failed for %s: %s", rp.part_id, exc)
+
         color = rp.color or color_for_part(rp.name, index)
 
         # Tessellate the LOCATED shape. The returned bbox center is the mesh's
@@ -546,8 +561,11 @@ class CADParser:
         mesh_path = output_dir / f"{rp.part_id}.glb"
         mesh_file: str | None = None
         success, mesh_bbox_center = tessellate_to_glb(
-            rp.shape, mesh_path, self._linear_deflection,
-            unit_scale=unit_scale, color=color,
+            rp.shape,
+            mesh_path,
+            self._linear_deflection,
+            unit_scale=unit_scale,
+            color=color,
         )
         if success:
             # Append timestamp to bust drei/browser GLB cache on re-upload
@@ -566,6 +584,8 @@ class CADParser:
             rotation=[0.0, 0.0, 0.0],
             geometry=geo_type,
             dimensions=dims,
+            shape_class=shape_class,
+            face_stats=face_stats,
             color=color,
             layout_rotation=layout_rot,
         )
@@ -573,34 +593,3 @@ class CADParser:
     # ------------------------------------------------------------------
     # Contact detection
     # ------------------------------------------------------------------
-    def _detect_contacts(self, parts: list[_RawPart]) -> list[tuple[str, str]]:
-        """Find pairs of parts in contact (distance < tolerance).
-
-        O(n^2) but assemblies are small (typically 2-50 parts).
-        """
-        contacts: list[tuple[str, str]] = []
-        n = len(parts)
-        for i in range(n):
-            for j in range(i + 1, n):
-                try:
-                    dist_tool = BRepExtrema_DistShapeShape(
-                        parts[i].shape,
-                        parts[j].shape,
-                    )
-                    if dist_tool.IsDone() and dist_tool.Value() < self._contact_tolerance:
-                        contacts.append((parts[i].part_id, parts[j].part_id))
-                        logger.debug(
-                            "Contact: %s ↔ %s (dist=%.6f)",
-                            parts[i].part_id,
-                            parts[j].part_id,
-                            dist_tool.Value(),
-                        )
-                except Exception as exc:
-                    logger.debug(
-                        "Contact check failed for %s/%s: %s",
-                        parts[i].part_id,
-                        parts[j].part_id,
-                        exc,
-                    )
-        logger.info("Detected %d contact pair(s) among %d parts", len(contacts), n)
-        return contacts

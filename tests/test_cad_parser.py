@@ -188,7 +188,9 @@ class TestCADParser:
         for part in result.graph.parts.values():
             assert part.position is not None, f"{part.id} missing position"
             assert len(part.position) == 3
-            assert part.geometry in {"box", "cylinder", "sphere"}, f"{part.id}: {part.geometry}"
+            assert part.geometry in {"box", "cylinder", "sphere", "disc", "plate"}, (
+                f"{part.id}: {part.geometry}"
+            )
             assert part.dimensions is not None and len(part.dimensions) >= 1
             assert part.color is not None and part.color.startswith("#")
 
@@ -468,12 +470,86 @@ class TestClassifyGeometry:
         geo, _dims = classify_geometry(0.05, 0.05, 0.048)
         assert geo == "sphere"
 
-    def test_flat_box(self):
+    def test_flat_disc(self):
+        """Flat shape with two similar large dims → disc (was "box" before disc type)."""
         from nextis.assembly.mesh_utils import classify_geometry
 
         geo, dims = classify_geometry(0.1, 0.01, 0.1)
-        assert geo == "box"
+        assert geo == "disc"
+        assert len(dims) == 2
+        # dims = [radius, height]; height should be the thin dimension
+        assert dims[1] == pytest.approx(0.01)
+
+    def test_classify_geometry_disc(self):
+        """Short flat cylinder (washer/gear/flange) → disc."""
+        from nextis.assembly.mesh_utils import classify_geometry
+
+        geo, dims = classify_geometry(0.03, 0.03, 0.005)
+        assert geo == "disc"
+        assert len(dims) == 2
+        assert dims[1] == pytest.approx(0.005)
+
+    def test_classify_geometry_plate(self):
+        """Flat rectangular shape with unequal large dims → plate."""
+        from nextis.assembly.mesh_utils import classify_geometry
+
+        # Large dims differ by >1.5x (0.08 / 0.03 = 2.67), so not disc
+        geo, dims = classify_geometry(0.08, 0.003, 0.03)
+        assert geo == "plate"
         assert len(dims) == 3
+        # dims = [length, width, thickness] in descending order
+        assert dims[0] == pytest.approx(0.08)
+        assert dims[2] == pytest.approx(0.003)
+
+    @pytest.mark.parametrize(
+        ("dx", "dy", "dz", "expected_geo"),
+        [
+            (0.05, 0.05, 0.048, "sphere"),
+            (0.03, 0.1, 0.03, "cylinder"),
+            (0.08, 0.04, 0.06, "box"),
+        ],
+    )
+    def test_classify_geometry_backward_compat(self, dx, dy, dz, expected_geo):
+        """Original sphere/cylinder/box cases still classify correctly."""
+        from nextis.assembly.mesh_utils import classify_geometry
+
+        geo, _dims = classify_geometry(dx, dy, dz)
+        assert geo == expected_geo
+
+
+class TestClassifyShapeFromFaces:
+    """Tests for classify_shape_from_faces (OCC face analysis)."""
+
+    def test_classify_shape_shaft(self):
+        """A simple OCC cylinder solid should classify as shaft."""
+        from nextis.assembly.mesh_utils import classify_shape_from_faces
+
+        # Create a tall cylinder (shaft-like)
+        cyl = BRepPrimAPI_MakeCylinder(0.01, 0.1).Shape()
+        shape_class, face_stats = classify_shape_from_faces(cyl)
+        assert shape_class == "shaft"
+        assert "cylindrical" in face_stats
+        assert face_stats["cylindrical"] > 50
+
+    def test_classify_shape_degenerate_fallback(self):
+        """None or invalid shape → ('complex', {})."""
+        from nextis.assembly.mesh_utils import classify_shape_from_faces
+
+        shape_class, face_stats = classify_shape_from_faces(None)
+        assert shape_class == "complex"
+        assert face_stats == {}
+
+    def test_disc_volume_computation(self):
+        """_part_volume with disc dims computes πr²h correctly."""
+        import math
+
+        from nextis.assembly.models import Part
+        from nextis.assembly.sequence_planner import _part_volume
+
+        part = Part(id="washer", geometry="disc", dimensions=[0.015, 0.005])
+        vol = _part_volume(part)
+        expected = math.pi * 0.015**2 * 0.005
+        assert vol == pytest.approx(expected, rel=1e-3)
 
 
 # ---------------------------------------------------------------------------
